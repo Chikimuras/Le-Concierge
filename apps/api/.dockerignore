@@ -1,0 +1,8 @@
+# Per-crate docker ignore. The repo-root `.dockerignore` covers most of
+# this already; redundant entries are safe and explicit.
+target/
+node_modules/
+.env
+.env.*
+!.env.example
+*.log

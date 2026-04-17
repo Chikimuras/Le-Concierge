@@ -1,0 +1,47 @@
+# Files excluded from every Docker build context rooted at the repo.
+# Keeps images small and prevents secrets from leaking into layers.
+
+# --- Build outputs / caches -------------------------------------------------
+target/
+**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.cache/
+.vite/
+coverage/
+
+# --- VCS and editors --------------------------------------------------------
+.git/
+.gitignore
+.github/
+.gitea/
+.idea/
+.vscode/
+.fleet/
+
+# --- Secrets / local files --------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+
+# --- OS metadata ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# --- Docs / noise -----------------------------------------------------------
+docs/
+*.md
+!README.md
+phase0-bootstrap.bundle
+phase*.bundle
+
+# --- Test artifacts ---------------------------------------------------------
+test-results/
+playwright-report/
+playwright/.cache/

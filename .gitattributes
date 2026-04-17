@@ -1,0 +1,40 @@
+# Normalize line endings to LF on checkin, auto on checkout.
+* text=auto eol=lf
+
+# Explicit text files
+*.rs      text diff=rust
+*.toml    text
+*.yml     text
+*.yaml    text
+*.json    text
+*.md      text diff=markdown
+*.ts      text
+*.tsx     text
+*.js      text
+*.jsx     text
+*.vue     text
+*.css     text
+*.scss    text
+*.html    text
+*.sql     text
+*.sh      text eol=lf
+*.hurl    text
+
+# Binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.webp    binary
+*.pdf     binary
+*.woff    binary
+*.woff2   binary
+*.ttf     binary
+*.otf     binary
+*.zip     binary
+*.tar.gz  binary
+
+# Generated / merge-friendly
+Cargo.lock merge=ours
+bun.lockb  binary

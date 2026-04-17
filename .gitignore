@@ -1,0 +1,63 @@
+# ---- Environment & secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+.sops.yaml.bak
+
+# ---- Rust ----
+target/
+**/*.rs.bk
+Cargo.lock.bak
+# Keep root Cargo.lock for binary crates; workspace manages it.
+
+# ---- Node / Bun ----
+node_modules/
+.pnp.*
+bun.lockb.bak
+.bun/
+dist/
+dist-ssr/
+coverage/
+.nyc_output/
+
+# ---- Vite / Vue ----
+.vite/
+.vite-cache/
+*.local
+stats.html
+
+# ---- Playwright ----
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# ---- IDE / editors ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.fleet/
+*.swp
+*.swo
+*~
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---- Build outputs / tmp ----
+*.log
+logs/
+tmp/
+.cache/
+
+# ---- Docker ----
+.docker-volumes/
+
+# ---- Claude / local tooling ----
+.claude/local/

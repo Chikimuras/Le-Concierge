@@ -1,0 +1,8 @@
+# Pin the Rust toolchain so every contributor and CI runner uses the same
+# compiler version. Bumped intentionally via a dedicated `chore(rust)` commit.
+#
+# Ref: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+[toolchain]
+channel = "1.85"
+components = ["rustfmt", "clippy"]
+profile = "default"

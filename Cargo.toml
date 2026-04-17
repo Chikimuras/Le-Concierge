@@ -1,0 +1,53 @@
+# Root Cargo workspace manifest for `Le Concierge`.
+#
+# Members are listed **explicitly**, not via `apps/*` / `packages/*` globs.
+# Globs fail when a matched directory lacks a `Cargo.toml` — which is our
+# case, since `apps/web` (Vue) and `packages/contracts` (TS) are Bun
+# workspaces, not Rust crates. Adding a new Rust crate = one line here.
+#
+# Ref: https://doc.rust-lang.org/cargo/reference/workspaces.html
+[workspace]
+resolver = "3"
+members = [
+    "apps/api",
+]
+
+# Shared settings inherited by member crates via `package.workspace = true`.
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+license = "LicenseRef-Proprietary"
+authors = ["Le Concierge <dev@leconcierge.local>"]
+repository = "https://github.com/v0idware/le-concierge"
+readme = "README.md"
+
+# Pin common deps here once the first crate lands. Kept empty until then to
+# avoid unused-dependency noise.
+[workspace.dependencies]
+
+# Lint profile applied to every workspace crate. `clippy -D warnings` runs in
+# CI; these lints are the *floor*. Pedantic and documentation lints are left
+# at their defaults for now and will be tightened once the codebase has
+# enough shape to make them actionable (tracked as tech debt).
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+dbg_macro = "deny"
+todo = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"
+opt-level = 3
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true

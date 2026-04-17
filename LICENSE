@@ -1,0 +1,21 @@
+Le Concierge — Proprietary License
+
+Copyright (c) 2026 Alexandre Velia. All rights reserved.
+
+This software and its source code (the "Software") are the exclusive property
+of the copyright holder. No license, express or implied, is granted to any
+party to use, copy, modify, merge, publish, distribute, sublicense, or sell
+copies of the Software, nor to create derivative works thereof, without the
+prior written permission of the copyright holder.
+
+The Software is provided "AS IS", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose and non-infringement. In no event shall the
+authors or copyright holders be liable for any claim, damages or other
+liability, whether in an action of contract, tort or otherwise, arising from,
+out of or in connection with the Software or the use or other dealings in the
+Software.
+
+Third-party open-source dependencies are distributed under their own licenses,
+which are unaffected by this notice. See the dependency manifests (Cargo.toml,
+package.json) and generated notices for details.

@@ -1,0 +1,94 @@
+[package]
+name = "api"
+version = "0.1.0"
+description = "Le Concierge HTTP API"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "api"
+path = "src/main.rs"
+
+[lib]
+name = "api"
+path = "src/lib.rs"
+
+[dependencies]
+# --- async runtime -----------------------------------------------------------
+tokio = { version = "1.41", features = ["macros", "rt-multi-thread", "signal", "net", "time", "sync"] }
+
+# --- http framework ----------------------------------------------------------
+axum = { version = "0.8", features = ["macros", "http2", "tokio"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = [
+    "trace",
+    "timeout",
+    "compression-gzip",
+    "compression-br",
+    "cors",
+    "request-id",
+    "set-header",
+    "sensitive-headers",
+    "propagate-header",
+    "catch-panic",
+] }
+http = "1"
+
+# --- serialization -----------------------------------------------------------
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# --- errors ------------------------------------------------------------------
+# thiserror is used in library modules (domain errors).
+# anyhow is used only in main.rs / bootstrap per CLAUDE.md §2.1.
+thiserror = "2"
+anyhow = "1"
+
+# --- observability -----------------------------------------------------------
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "env-filter",
+    "json",
+    "fmt",
+    "registry",
+    "std",
+] }
+
+# --- config ------------------------------------------------------------------
+figment = { version = "0.10", features = ["toml", "env"] }
+dotenvy = "0.15"
+
+# --- database ----------------------------------------------------------------
+# Lazy pool: no connection is established at boot. First query will attempt to
+# connect; integration tests for non-DB endpoints therefore do not require a
+# running Postgres.
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "macros",
+    "migrate",
+] }
+
+# --- OpenAPI / docs ----------------------------------------------------------
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-axum = "0.2"
+utoipa-scalar = { version = "0.3", features = ["axum"] }
+
+# --- misc --------------------------------------------------------------------
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+
+[dev-dependencies]
+# End-to-end integration tests spawn the real app and hit it over HTTP.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1.41", features = ["full", "test-util"] }

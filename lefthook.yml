@@ -1,0 +1,77 @@
+# Git hooks configuration. Install with `lefthook install` (or `just hooks-install`).
+#
+# Keep these hooks *fast* — they run on every commit. Heavy checks live in CI.
+# Ref: https://lefthook.dev/configuration/
+#
+# Phase 0 note: most language-specific hooks are stubbed until Phases 1 and 2
+# land their respective toolchains. `gitleaks` and generic checks run today.
+
+min_version: 1.8.0
+assert_lefthook_installed: true
+skip_output:
+  - meta
+  - skips
+
+pre-commit:
+  parallel: true
+  commands:
+    # --- Secrets -----------------------------------------------------------
+    gitleaks:
+      tags: [security]
+      run: gitleaks protect --staged --redact --config .gitleaks.toml
+      fail_text: "Potential secret found. Remove it before committing."
+
+    # --- Generic --------------------------------------------------------
+    trailing-whitespace:
+      tags: [style]
+      glob: "*.{rs,ts,tsx,vue,js,jsx,json,yml,yaml,md,toml,sh,sql,hurl}"
+      run: |
+        if grep -nP ' +$' {staged_files}; then
+          echo "Trailing whitespace found. Run 'sed -i \"s/[[:space:]]*\\$//\" <file>' or fix manually."
+          exit 1
+        fi
+
+    # --- Rust (active from Phase 1) -------------------------------------
+    rustfmt:
+      tags: [rust, style]
+      glob: "*.rs"
+      run: cargo fmt --all -- --check
+      skip:
+        - run: test ! -f Cargo.toml || ! ls apps/api/Cargo.toml >/dev/null 2>&1
+
+    clippy:
+      tags: [rust, lint]
+      glob: "*.rs"
+      run: cargo clippy --all-targets --locked -- -D warnings
+      skip:
+        - run: test ! -f Cargo.toml || ! ls apps/api/Cargo.toml >/dev/null 2>&1
+
+    # --- Web (active from Phase 2) --------------------------------------
+    eslint:
+      tags: [web, lint]
+      glob: "*.{ts,tsx,vue,js,jsx}"
+      run: bun run --filter './apps/web' lint
+      skip:
+        - run: test ! -d apps/web/node_modules
+
+    prettier:
+      tags: [web, style]
+      glob: "*.{ts,tsx,vue,js,jsx,json,md,yml,yaml}"
+      run: bun run --filter './apps/web' format:check
+      skip:
+        - run: test ! -d apps/web/node_modules
+
+commit-msg:
+  commands:
+    conventional-commits:
+      tags: [style]
+      run: |
+        msg_file="{1}"
+        # Allow merge and fixup commits.
+        head -1 "$msg_file" | grep -qE '^(Merge|fixup!|squash!) ' && exit 0
+        # Conventional Commits: https://www.conventionalcommits.org/en/v1.0.0/
+        head -1 "$msg_file" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9\-]+\))?!?: .+'
+      fail_text: |
+        Commit message must follow Conventional Commits.
+        Format: type(scope): description
+        Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test

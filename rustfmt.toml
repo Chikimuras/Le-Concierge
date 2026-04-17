@@ -1,0 +1,9 @@
+# rustfmt configuration. Minimal on purpose: stick close to defaults, only
+# diverge when there is a concrete reason. Stable-only options here; any
+# nightly-gated option must stay out of this file so `cargo fmt --check`
+# works on stable.
+edition = "2024"
+max_width = 100
+newline_style = "Unix"
+use_field_init_shorthand = true
+use_try_shorthand = true

@@ -1,0 +1,33 @@
+# Default configuration for the `api` binary.
+#
+# Every value here can be overridden by:
+#   1. A file pointed to by APP_CONFIG_FILE
+#   2. Environment variables prefixed with APP_ (nested via `__`)
+#
+# Keep secrets (DB URL, pepper, API keys) OUT of this file. They belong in
+# env vars / Docker secrets — see CLAUDE.md §3.3 and ADR 0002.
+
+[http]
+bind = "127.0.0.1:3000"
+request_timeout_secs = 30
+public_base_url = "http://localhost:3000"
+
+[database]
+# Overridden in every non-trivial env via APP_DATABASE__URL. The value below
+# is a placeholder so a fresh clone can compile tests; it is intentionally
+# non-routable.
+url = "postgres://le_concierge:postgres@127.0.0.1:5432/le_concierge_dev"
+max_connections = 10
+min_connections = 0
+statement_timeout_secs = 5
+
+[telemetry]
+# Dev uses pretty multi-line logs. Prod must set APP_TELEMETRY__FORMAT=json.
+format = "pretty"
+filter = "api=debug,tower_http=info,sqlx=warn,warn"
+service_name = "api"
+
+[cors]
+# Empty = CORS off. Populate in each environment (dev adds the Vite URL,
+# prod adds the real domain(s)).
+allowed_origins = []

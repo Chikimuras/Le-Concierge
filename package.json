@@ -1,0 +1,21 @@
+{
+  "name": "le-concierge",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Le Concierge — SaaS concierge platform for short-term rentals. Monorepo root.",
+  "license": "SEE LICENSE IN LICENSE",
+  "packageManager": "bun@1.1.38",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "bun": ">=1.1.38"
+  },
+  "scripts": {
+    "lint": "bun run --filter '*' lint",
+    "test": "bun run --filter '*' test",
+    "build": "bun run --filter '*' build",
+    "typecheck": "bun run --filter '*' typecheck"
+  }
+}

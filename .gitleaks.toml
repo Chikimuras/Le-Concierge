@@ -1,0 +1,35 @@
+# Gitleaks configuration for Le Concierge.
+#
+# Ref: https://github.com/gitleaks/gitleaks#configuration
+# Extends the upstream default ruleset (AWS keys, GitHub PATs, Stripe keys, etc.)
+# and adds project-specific allowlist entries.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Safe to ignore — example values and documentation."
+paths = [
+  '''(?i)^\.env\.example$''',
+  '''(?i)^docs/''',
+  '''(?i)^.*\.md$''',
+  '''(?i)^LICENSE$''',
+]
+regexes = [
+  # Conventional placeholder values used in examples and ADRs.
+  '''(?i)(password|secret|token|api[-_]?key)\s*=\s*["']?(example|changeme|your[-_].*|<[^>]+>|xxx+|todo|tbd)["']?''',
+]
+
+# Additional project-specific rule: warn on any string that looks like a
+# Stripe live key, which must never appear outside Docker secrets / SOPS.
+[[rules]]
+id = "stripe-live-secret-key"
+description = "Stripe live mode secret key"
+regex = '''sk_live_[0-9a-zA-Z]{24,}'''
+tags = ["stripe", "secret", "live"]
+
+[[rules]]
+id = "stripe-live-publishable-key"
+description = "Stripe live mode publishable key"
+regex = '''pk_live_[0-9a-zA-Z]{24,}'''
+tags = ["stripe", "secret", "live"]
