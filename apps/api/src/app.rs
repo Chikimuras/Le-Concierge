@@ -29,7 +29,8 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
-    auth, health, middleware as mw, openapi::ApiDoc, properties, session::csrf, state::AppState,
+    auth, health, invites, middleware as mw, openapi::ApiDoc, properties, session::csrf,
+    state::AppState,
 };
 
 /// Build the fully composed application router.
@@ -73,6 +74,19 @@ pub fn build_app(state: AppState) -> Router {
             .expect("static rate-limit config always builds"),
     );
 
+    // /auth/invites/{preview,signup} — anonymous, token-guessing budget
+    // identical to /auth/login. Separate config for independent state
+    // (same rationale as TOTP).
+    #[allow(clippy::expect_used)]
+    let invite_rl_config = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_millisecond(180_000)
+            .burst_size(5)
+            .key_extractor(SmartIpKeyExtractor)
+            .finish()
+            .expect("static rate-limit config always builds"),
+    );
+
     // Compose routes with OpenAPI metadata, then split for serving.
     let (api_router, openapi) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(health::routes::router())
@@ -84,6 +98,10 @@ pub fn build_app(state: AppState) -> Router {
             config: totp_rl_config,
         }))
         .merge(properties::routes::router())
+        .merge(invites::routes::authenticated_router())
+        .merge(invites::routes::anonymous_router().layer(GovernorLayer {
+            config: invite_rl_config,
+        }))
         .split_for_parts();
 
     let docs_router = crate::openapi::docs_router(openapi);

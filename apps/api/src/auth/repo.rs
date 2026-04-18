@@ -136,6 +136,30 @@ impl AuthRepo {
         Ok((OrgId::from(org_id), UserId::from(user_id)))
     }
 
+    /// Create a user without an owning organisation. Used by the
+    /// invite signup-and-accept flow, where the caller already has a
+    /// membership waiting for them and no new org should be created.
+    /// Email collisions surface as [`AuthError::EmailAlreadyTaken`].
+    pub async fn create_user_with_email(
+        &self,
+        email: &Email,
+        password_hash: &PasswordHash,
+    ) -> Result<UserId, AuthError> {
+        let id: Uuid = sqlx::query_scalar!(
+            r#"
+            INSERT INTO users (email, password_hash)
+            VALUES ($1, $2)
+            RETURNING id
+            "#,
+            email.as_str(),
+            password_hash.as_db_str(),
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(translate_unique_violation)?;
+        Ok(UserId::from(id))
+    }
+
     /// Look up a user by email (case-insensitive via `citext`). Returns
     /// `Ok(None)` if no such user exists.
     pub async fn find_user_by_email(&self, email: &Email) -> Result<Option<UserRow>, AuthError> {

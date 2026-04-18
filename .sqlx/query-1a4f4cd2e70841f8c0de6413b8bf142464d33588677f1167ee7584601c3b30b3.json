@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE organization_invites\n               SET cancelled_at = now()\n             WHERE id = $1\n               AND org_id = $2\n               AND accepted_at IS NULL\n               AND cancelled_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1a4f4cd2e70841f8c0de6413b8bf142464d33588677f1167ee7584601c3b30b3"
+}

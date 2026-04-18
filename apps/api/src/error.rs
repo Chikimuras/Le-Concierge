@@ -51,6 +51,12 @@ pub enum AppError {
     #[error("too many requests")]
     RateLimited,
 
+    /// Resource is known but no longer available (expired invite, purged
+    /// reservation, …). 410 Gone. Distinct from `NotFound` so the UI can
+    /// say "this invite has expired" instead of "not found".
+    #[error("gone: {0}")]
+    Gone(String),
+
     /// A required dependency is temporarily unavailable.
     #[error("service unavailable")]
     Unavailable,
@@ -72,6 +78,7 @@ impl AppError {
             Self::Validation(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
+            Self::Gone(_) => StatusCode::GONE,
             Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -87,6 +94,7 @@ impl AppError {
             Self::Validation(_) => "validation",
             Self::Conflict(_) => "conflict",
             Self::RateLimited => "rate_limited",
+            Self::Gone(_) => "gone",
             Self::Unavailable => "unavailable",
             Self::Internal(_) => "internal",
         }
@@ -104,6 +112,7 @@ impl AppError {
             Self::Validation(reason) => format!("Données invalides : {reason}"),
             Self::Conflict(reason) => format!("Conflit : {reason}"),
             Self::RateLimited => "Trop de requêtes, réessayez plus tard.".into(),
+            Self::Gone(reason) => format!("Ressource expirée : {reason}"),
             Self::Unavailable => "Service momentanément indisponible.".into(),
             Self::Internal(_) => "Erreur interne du serveur.".into(),
         }
@@ -192,6 +201,7 @@ mod tests {
             AppError::RateLimited.status(),
             StatusCode::TOO_MANY_REQUESTS
         );
+        assert_eq!(AppError::Gone("expired".into()).status(), StatusCode::GONE);
         assert_eq!(
             AppError::Unavailable.status(),
             StatusCode::SERVICE_UNAVAILABLE
@@ -211,6 +221,7 @@ mod tests {
             AppError::Validation("x".into()),
             AppError::Conflict("x".into()),
             AppError::RateLimited,
+            AppError::Gone("x".into()),
             AppError::Unavailable,
             AppError::Internal(anyhow::anyhow!("x")),
         ] {

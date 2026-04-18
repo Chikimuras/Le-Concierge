@@ -32,12 +32,12 @@ service_name = "api"
 # prod adds the real domain(s)).
 allowed_origins = []
 
-# The `[auth]` section is intentionally omitted from the TOML baseline:
-# both `auth.pepper` (password hashing pepper) and `auth.totp_key` (AES-256
-# key wrapping TOTP secrets at rest) are secrets (CLAUDE.md §3.1, ADR 0005
-# / 0007) and must be supplied via `APP_AUTH__PEPPER` / `APP_AUTH__TOTP_KEY`
-# env vars (or Docker secrets in prod). Missing values make `Config::load()`
-# fail closed, which is the desired default.
+# `[auth]` — secrets intentionally come from env only. `pepper` and
+# `totp_key` have no defaults (CLAUDE.md §3.1 / ADR 0005 / ADR 0007);
+# missing them makes `Config::load()` fail closed. `invite_ttl_secs`
+# is not a secret — default shipped so fresh clones boot.
+[auth]
+invite_ttl_secs = 604800     # 7 days — team invite validity (ADR 0009)
 
 [session]
 idle_ttl_secs = 604800        # 7 days — the idle cut-off

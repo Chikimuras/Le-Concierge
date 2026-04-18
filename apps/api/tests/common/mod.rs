@@ -67,6 +67,7 @@ fn test_config(db_url: String, redis_url: String) -> Config {
             totp_key: SecretString::from(
                 "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
             ),
+            invite_ttl_secs: 604_800,
         },
         session: SessionConfig {
             idle_ttl_secs: 600,

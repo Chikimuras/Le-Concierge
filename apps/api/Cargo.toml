@@ -112,11 +112,13 @@ redis = { version = "0.27", default-features = false, features = [
     "tokio-comp",
     "connection-manager",
 ] }
-# SHA-256 for the audit hash chain. `rand` for CSPRNG-based session IDs.
-# `base64` encodes those IDs for the `lc_sid` cookie. `time` provides the
-# `Duration` type expected by the `cookie` crate (pulled in transitively
-# by `axum-extra`).
+# SHA-256 for the audit hash chain and HMAC-SHA-256 wrapping invite
+# tokens at rest (ADR 0009). `rand` for CSPRNG-based session IDs.
+# `base64` encodes those IDs for the `lc_sid` cookie. `time` provides
+# the `Duration` type expected by the `cookie` crate (pulled in
+# transitively by `axum-extra`).
 sha2 = "0.10"
+hmac = "0.12"
 rand = "0.8"
 base64 = "0.22"
 time = "0.3"
@@ -124,6 +126,10 @@ time = "0.3"
 # --- misc --------------------------------------------------------------------
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+# `async fn` in trait is stable but adding `dyn EmailSender + Send +
+# Sync` on stable requires extra ceremony; `async-trait` keeps the
+# trait definition minimal.
+async-trait = "0.1"
 
 [dev-dependencies]
 # End-to-end integration tests spawn the real app and hit it over HTTP.

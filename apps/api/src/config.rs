@@ -113,6 +113,11 @@ pub struct AuthConfig {
     /// Generate with `openssl rand -hex 32`; the api fails closed if the
     /// value is missing or cannot decode to exactly 32 bytes.
     pub totp_key: SecretString,
+
+    /// How long a team invite stays valid, in seconds. Default 7 days
+    /// (CLAUDE.md §9 / ADR 0009). Shorter is safer; tune per deployment
+    /// via `APP_AUTH__INVITE_TTL_SECS`.
+    pub invite_ttl_secs: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -201,6 +206,7 @@ impl Config {
             "auth": {
                 "pepper_configured": true,
                 "totp_key_configured": true,
+                "invite_ttl_secs": self.auth.invite_ttl_secs,
             },
             "session": {
                 "idle_ttl_secs": self.session.idle_ttl_secs,
@@ -249,6 +255,7 @@ mod tests {
                 totp_key: SecretString::from(
                     "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
                 ),
+                invite_ttl_secs: 604_800,
             },
             session: SessionConfig {
                 idle_ttl_secs: 3600,
