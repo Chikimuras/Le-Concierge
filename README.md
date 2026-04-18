@@ -3,10 +3,10 @@
 SaaS concierge platform for short-term rentals (Airbnb, Booking.com, VRBO).
 Multi-tenant, security-first, 100% OSS stack. Solo-dev maintainable.
 
-> **Status:** Phase 1 — `apps/api` boots, serves `GET /healthz`, exposes an
-> OpenAPI document at `/openapi.json`, and a Scalar UI at `/docs`. No
-> migration, no auth, no frontend yet. See `docs/adr/` for design decisions
-> and [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
+> **Status:** Phase 2 — `apps/api` serves `GET /healthz` + OpenAPI/Scalar
+> docs; `apps/web` is a Vue 3 + Vite + shadcn-vue shell that pings it. No
+> migration, no auth yet. See `docs/adr/` for design decisions and
+> [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
 
 ---
 
@@ -73,6 +73,25 @@ curl http://127.0.0.1:3000/healthz
 open http://127.0.0.1:3000/docs          # Scalar API reference
 ```
 
+### Run the web app (Phase 2)
+
+```bash
+just web-install                         # bun install at the repo root
+just api-run                             # terminal 1: Axum on :3000
+just web-dev                             # terminal 2: Vite on :5173
+```
+
+Open http://127.0.0.1:5173. The home page polls the API via the Vite
+dev proxy (`/api/*` → `:3000`), so no CORS configuration is needed in dev.
+Toggle between system / light / dark theme from the buttons at the bottom.
+
+To add a shadcn-vue component:
+
+```bash
+cd apps/web
+bunx shadcn-vue@latest add button        # or card, input, …
+```
+
 ### Build the production image
 
 ```bash
@@ -80,8 +99,7 @@ just api-docker-build                    # multi-stage, distroless, nonroot
 just api-docker-run                      # runs it locally, port 3000
 ```
 
-More commands will appear as the web app (Phase 2) and Docker compose
-stack (Phase 3) land.
+More commands will appear as the Docker compose stack (Phase 3) lands.
 
 ---
 
@@ -91,7 +109,7 @@ stack (Phase 3) land.
 .
 ├── apps/
 │   ├── api/           # Rust backend (Axum) — Phase 1 ✓
-│   └── web/           # Vue 3 frontend — Phase 2
+│   └── web/           # Vue 3 frontend — Phase 2 ✓
 ├── packages/
 │   ├── contracts/     # TS types generated from OpenAPI + shared Zod schemas
 │   └── ui/            # Shared shadcn-vue components (if needed)

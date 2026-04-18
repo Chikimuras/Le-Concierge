@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Le Concierge",
+    "tagline": "Plateforme de conciergerie pour locations courte durée."
+  },
+  "pages": {
+    "home": {
+      "title": "Accueil",
+      "api_status_heading": "État de l'API",
+      "api_status_loading": "Vérification en cours…",
+      "api_status_ok": "Opérationnelle",
+      "api_status_error": "Indisponible",
+      "api_service": "Service",
+      "api_version": "Version"
+    }
+  },
+  "theme": {
+    "toggle_aria": "Basculer le thème",
+    "system": "Système",
+    "light": "Clair",
+    "dark": "Sombre"
+  }
+}

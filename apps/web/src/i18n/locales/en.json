@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Le Concierge",
+    "tagline": "Concierge platform for short-term rentals."
+  },
+  "pages": {
+    "home": {
+      "title": "Home",
+      "api_status_heading": "API status",
+      "api_status_loading": "Checking…",
+      "api_status_ok": "Healthy",
+      "api_status_error": "Unavailable",
+      "api_service": "Service",
+      "api_version": "Version"
+    }
+  },
+  "theme": {
+    "toggle_aria": "Toggle theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

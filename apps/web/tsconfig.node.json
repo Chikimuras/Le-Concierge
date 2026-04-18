@@ -1,0 +1,22 @@
+{
+  // Separate tsconfig for Node-runtime files (Vite config, ESLint config).
+  // `composite: true` is required so `tsconfig.json` can `references` it,
+  // but `composite` forbids `noEmit: true` — so we let TS emit (never
+  // invoked in practice) into a throwaway path under `node_modules`.
+  // Mirrors the pattern used by the `create-vue` template.
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "outDir": "./node_modules/.tmp/tsconfig-node",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
+  },
+  "include": ["vite.config.ts", "eslint.config.js"]
+}
