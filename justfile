@@ -59,20 +59,21 @@ audit:
 # --- API (apps/api) ---------------------------------------------------------
 
 # Run the api in watch mode (requires `cargo-watch` — `cargo install cargo-watch`).
+# `cd` first so `dotenvy` picks up `apps/api/.env` from the crate dir.
 api-dev:
-    cargo watch -x 'run -p api'
+    cd apps/api && cargo watch -x run
 
 # One-shot debug run of the api.
 api-run:
-    cargo run -p api
+    cd apps/api && cargo run
 
 # Release build, single binary.
 api-build:
-    cargo build --release -p api
+    cd apps/api && cargo build --release
 
 # Focused tests for the api crate.
 api-test:
-    cargo test -p api --locked
+    cd apps/api && cargo test --locked
 
 # Build the production Docker image.
 api-docker-build:
