@@ -75,13 +75,26 @@ const routes: RouteRecordRaw[] = [
  * integration tests can import the exact same function the real router
  * wires up, instead of reconstructing it inline and silently drifting.
  *
- * Ordering matters: `requiresAuth` → `requiresAnonymous` → MFA gating.
- * Routes with `mfaFlow: true` are always allowed for an authenticated
- * user so the guard never loops (you can't send a user to the
- * challenge page *from* the challenge page).
+ * Ordering matters: hydrate wait → `requiresAuth` → `requiresAnonymous`
+ * → MFA gating. Routes with `mfaFlow: true` are always allowed for an
+ * authenticated user so the guard never loops (you can't send a user
+ * to the challenge page *from* the challenge page).
+ *
+ * On the first navigation, the bootstrap's non-blocking
+ * `session.hydrate()` may still be in flight. Awaiting here ensures a
+ * legitimate session loaded from the `lc_sid` cookie is not mistaken
+ * for an anonymous one and bounced to /login.
  */
-export function authGuard(to: RouteLocationNormalized): NavigationGuardReturn {
+export async function authGuard(to: RouteLocationNormalized): Promise<NavigationGuardReturn> {
   const session = useSessionStore()
+
+  // Only protected / anonymous-only routes depend on session state.
+  // Truly public routes (home) can render without waiting for
+  // `/auth/me` so we do not regress the anonymous first-paint budget.
+  const needsSession = to.meta.requiresAuth === true || to.meta.requiresAnonymous === true
+  if (needsSession && !session.hydrated) {
+    await session.hydrate()
+  }
 
   if (to.meta.requiresAuth && !session.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }

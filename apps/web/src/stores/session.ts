@@ -29,6 +29,10 @@ export const useSessionStore = defineStore('session', () => {
   const mfaEnrolled = ref(false)
   const mfaRequired = ref(false)
   const hydrated = ref(false)
+  // Outstanding `/auth/me` request, shared across concurrent callers so
+  // the router guard's `await session.hydrate()` latches onto the
+  // bootstrap's fire-and-forget call instead of firing a second one.
+  let hydratePromise: Promise<void> | null = null
 
   const isAuthenticated = computed(() => userId.value !== null)
 
@@ -86,19 +90,33 @@ export const useSessionStore = defineStore('session', () => {
    * Call `/auth/me` at boot. On 200 populates the store; on 401 marks
    * the user as anonymous. Swallows network failures with a warning —
    * the user will see the login screen anyway.
+   *
+   * Idempotent: already-hydrated sessions resolve immediately, and an
+   * in-flight call is shared across concurrent callers (the bootstrap
+   * fires `void hydrate()` while the router guard may `await hydrate()`
+   * on the first protected navigation — both must latch onto the same
+   * `/auth/me` response, otherwise the guard would decide on a
+   * pre-hydrate empty store and bounce a legitimate session to /login).
    */
-  async function hydrate(): Promise<void> {
-    try {
-      const body = await apiClient.get('auth/me').json<MeResponse>()
-      setFromAuth(body)
-    } catch (err) {
-      clear()
-      // 401 is the normal anonymous-boot flow; anything else is worth
-      // logging (network down, proxy misconfig, backend 5xx).
-      if (!isHttpError(err, 401)) {
-        console.warn('session hydrate failed', err)
+  function hydrate(): Promise<void> {
+    if (hydrated.value) return Promise.resolve()
+    if (hydratePromise) return hydratePromise
+    hydratePromise = (async () => {
+      try {
+        const body = await apiClient.get('auth/me').json<MeResponse>()
+        setFromAuth(body)
+      } catch (err) {
+        clear()
+        // 401 is the normal anonymous-boot flow; anything else is worth
+        // logging (network down, proxy misconfig, backend 5xx).
+        if (!isHttpError(err, 401)) {
+          console.warn('session hydrate failed', err)
+        }
+      } finally {
+        hydratePromise = null
       }
-    }
+    })()
+    return hydratePromise
   }
 
   return {
