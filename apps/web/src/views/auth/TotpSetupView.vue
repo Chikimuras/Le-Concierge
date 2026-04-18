@@ -2,7 +2,7 @@
   import { toTypedSchema } from '@vee-validate/zod'
   import QRCode from 'qrcode'
   import { useForm } from 'vee-validate'
-  import { onMounted, ref, shallowRef } from 'vue'
+  import { computed, onMounted, ref, shallowRef } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
 
@@ -14,7 +14,13 @@
   import { readProblemDetails } from '@/lib/api-client'
   import { totpEnrollVerifySchema } from '@/lib/api-contracts'
 
-  const { t } = useI18n()
+  const i18n = useI18n()
+  const t = i18n.t
+  // `tm` returns the raw message so arrays stay arrays; `t` would
+  // stringify `auth.totp.setup.instructions` and `v-for` would then
+  // iterate character-by-character. Keep it on the `i18n` object so
+  // the `this` binding stays intact.
+  const instructions = computed<string[]>(() => i18n.tm('auth.totp.setup.instructions'))
   const router = useRouter()
   const start = useTotpEnrollStart()
   const confirm = useTotpEnrollVerify()
@@ -153,7 +159,7 @@
           }}</code>
         </div>
         <ol class="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-          <li v-for="step in t('auth.totp.setup.instructions')" :key="step">{{ step }}</li>
+          <li v-for="(step, i) in instructions" :key="i">{{ step }}</li>
         </ol>
 
         <form novalidate class="grid gap-3" @submit.prevent="onSubmit">
