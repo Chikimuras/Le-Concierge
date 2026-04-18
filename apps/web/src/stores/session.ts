@@ -26,9 +26,25 @@ export const useSessionStore = defineStore('session', () => {
   const csrfToken = ref<string | null>(null)
   const absoluteExpiresAt = ref<string | null>(null)
   const mfaVerified = ref(false)
+  const mfaEnrolled = ref(false)
+  const mfaRequired = ref(false)
   const hydrated = ref(false)
 
   const isAuthenticated = computed(() => userId.value !== null)
+
+  /** 2FA gate: true when the session is allowed past the step-up guard.
+   *  An enrolled user must have `mfa_verified`; a non-enrolled user
+   *  passes unless their role makes 2FA mandatory. */
+  const mfaCleared = computed(() => !mfaEnrolled.value || mfaVerified.value)
+
+  /** The user must go through the enrollment flow before any other
+   *  protected action becomes available. Drives the enrollment redirect
+   *  in the router guard. */
+  const needsEnrollment = computed(() => mfaRequired.value && !mfaEnrolled.value)
+
+  /** The user has 2FA enrolled but has not completed step-up on the
+   *  current session yet. Drives the challenge redirect. */
+  const needsStepUp = computed(() => mfaEnrolled.value && !mfaVerified.value)
 
   function hasRoleIn(orgId: string, role: Role): boolean {
     return memberships.value.some((m) => m.org_id === orgId && m.role === role)
@@ -36,7 +52,7 @@ export const useSessionStore = defineStore('session', () => {
 
   /**
    * Populate the store from a successful auth response (signup, login,
-   * or `/auth/me`).
+   * `/auth/me`, or `/auth/2fa/verify`).
    */
   function setFromAuth(payload: AuthenticatedResponse | MeResponse): void {
     userId.value = payload.user_id
@@ -45,6 +61,8 @@ export const useSessionStore = defineStore('session', () => {
     csrfToken.value = payload.session.csrf_token
     absoluteExpiresAt.value = payload.session.absolute_expires_at
     mfaVerified.value = payload.session.mfa_verified
+    mfaEnrolled.value = payload.mfa_enrolled
+    mfaRequired.value = payload.mfa_required
     hydrated.value = true
   }
 
@@ -59,6 +77,8 @@ export const useSessionStore = defineStore('session', () => {
     csrfToken.value = null
     absoluteExpiresAt.value = null
     mfaVerified.value = false
+    mfaEnrolled.value = false
+    mfaRequired.value = false
     hydrated.value = true
   }
 
@@ -89,9 +109,14 @@ export const useSessionStore = defineStore('session', () => {
     csrfToken,
     absoluteExpiresAt,
     mfaVerified,
+    mfaEnrolled,
+    mfaRequired,
     hydrated,
     // getters
     isAuthenticated,
+    mfaCleared,
+    needsEnrollment,
+    needsStepUp,
     hasRoleIn,
     // actions
     setFromAuth,

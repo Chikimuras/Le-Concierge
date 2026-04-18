@@ -26,6 +26,14 @@
       "no_orgs": "Aucune organisation pour le moment.",
       "platform_admin": "Administration plateforme",
       "platform_admin_body": "Vous avez accès aux opérations transverses."
+    },
+    "settings": {
+      "title": "Paramètres"
+    },
+    "totp": {
+      "setup_title": "Activer l'authentification à deux facteurs",
+      "challenge_title": "Code de vérification",
+      "recovery_title": "Codes de récupération"
     }
   },
   "theme": {
@@ -84,6 +92,53 @@
       "cleaner": "Ménage",
       "guest": "Voyageur",
       "admin": "Administrateur"
+    },
+    "totp": {
+      "setup": {
+        "title": "Activer la double authentification",
+        "subtitle": "Scannez le QR code avec votre application d'authentification (Google Authenticator, 1Password, Bitwarden…).",
+        "qr_alt": "QR code d'enregistrement",
+        "secret_heading": "Saisie manuelle",
+        "secret_hint": "Si vous ne pouvez pas scanner, saisissez ce secret dans votre application :",
+        "code_label": "Code à 6 chiffres de l'application",
+        "submit": "Activer",
+        "already_enrolled": "La double authentification est déjà active sur ce compte.",
+        "instructions_heading": "Étapes",
+        "instructions": [
+          "Ouvrez votre application d'authentification.",
+          "Ajoutez un compte et scannez le QR code (ou saisissez le secret).",
+          "Entrez le code à 6 chiffres affiché par l'application."
+        ]
+      },
+      "challenge": {
+        "title": "Vérification en deux étapes",
+        "subtitle": "Entrez le code à 6 chiffres affiché par votre application d'authentification.",
+        "code_label": "Code de vérification",
+        "submit": "Vérifier",
+        "recovery_hint": "Vous avez perdu votre appareil ? Utilisez l'un de vos codes de récupération (format XXXX-XXXX)."
+      },
+      "recovery_codes": {
+        "title": "Codes de récupération",
+        "intro": "Conservez ces codes dans un endroit sûr. Chaque code fonctionne une seule fois et remplacera votre authentificateur si vous perdez l'accès.",
+        "warning": "Ils ne s'afficheront plus jamais.",
+        "download": "Télécharger en .txt",
+        "acknowledge": "J'ai sauvegardé mes codes",
+        "continue": "Continuer vers le tableau de bord"
+      },
+      "disable": {
+        "title": "Désactiver la double authentification",
+        "warning": "Votre compte sera moins protégé. Vous devrez scanner un nouveau QR code pour la réactiver plus tard.",
+        "password_label": "Mot de passe actuel",
+        "code_label": "Code à 6 chiffres actuel",
+        "submit": "Désactiver",
+        "cta_open": "Désactiver"
+      },
+      "errors": {
+        "invalid_code": "Code invalide. Vérifiez que l'heure de votre appareil est correcte puis réessayez.",
+        "already_enrolled": "La double authentification est déjà active.",
+        "rate_limited": "Trop de tentatives. Réessayez dans quelques minutes.",
+        "generic": "Opération impossible. Réessayez."
+      }
     }
   }
 }

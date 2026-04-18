@@ -26,6 +26,14 @@
       "no_orgs": "No organization yet.",
       "platform_admin": "Platform administration",
       "platform_admin_body": "You have access to cross-tenant operations."
+    },
+    "settings": {
+      "title": "Settings"
+    },
+    "totp": {
+      "setup_title": "Enable two-factor authentication",
+      "challenge_title": "Verification code",
+      "recovery_title": "Recovery codes"
     }
   },
   "theme": {
@@ -84,6 +92,53 @@
       "cleaner": "Cleaner",
       "guest": "Guest",
       "admin": "Admin"
+    },
+    "totp": {
+      "setup": {
+        "title": "Enable two-factor authentication",
+        "subtitle": "Scan the QR code with your authenticator app (Google Authenticator, 1Password, Bitwarden…).",
+        "qr_alt": "Enrollment QR code",
+        "secret_heading": "Manual entry",
+        "secret_hint": "If you cannot scan, enter this secret in your authenticator app:",
+        "code_label": "6-digit code from the app",
+        "submit": "Enable",
+        "already_enrolled": "Two-factor authentication is already enabled on this account.",
+        "instructions_heading": "Steps",
+        "instructions": [
+          "Open your authenticator app.",
+          "Add a new account and scan the QR code (or enter the secret).",
+          "Enter the 6-digit code displayed by the app."
+        ]
+      },
+      "challenge": {
+        "title": "Two-step verification",
+        "subtitle": "Enter the 6-digit code displayed by your authenticator app.",
+        "code_label": "Verification code",
+        "submit": "Verify",
+        "recovery_hint": "Lost your device? Use one of your recovery codes (format XXXX-XXXX)."
+      },
+      "recovery_codes": {
+        "title": "Recovery codes",
+        "intro": "Keep these codes in a safe place. Each code works only once and replaces your authenticator if you lose access.",
+        "warning": "They will not be shown again.",
+        "download": "Download as .txt",
+        "acknowledge": "I saved my codes",
+        "continue": "Continue to dashboard"
+      },
+      "disable": {
+        "title": "Disable two-factor authentication",
+        "warning": "Your account will be less protected. You will need to scan a new QR code to re-enable it later.",
+        "password_label": "Current password",
+        "code_label": "Current 6-digit code",
+        "submit": "Disable",
+        "cta_open": "Disable"
+      },
+      "errors": {
+        "invalid_code": "Invalid code. Check your device clock and try again.",
+        "already_enrolled": "Two-factor authentication is already enabled.",
+        "rate_limited": "Too many attempts. Try again in a few minutes.",
+        "generic": "Action failed. Please retry."
+      }
     }
   }
 }

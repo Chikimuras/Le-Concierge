@@ -17,6 +17,10 @@ declare module 'vue-router' {
     requiresAnonymous?: boolean
     /** i18n key for the page title. */
     titleKey?: string
+    /** Part of the MFA flow — exempt from the MFA enforcement redirects
+     *  below so we never loop (you can't send a user to the challenge
+     *  page *from* the challenge page). */
+    mfaFlow?: boolean
   }
 }
 
@@ -45,22 +49,59 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/DashboardView.vue'),
     meta: { requiresAuth: true, titleKey: 'pages.dashboard.title' },
   },
+  {
+    path: '/auth/2fa/setup',
+    name: 'totp-setup',
+    component: () => import('@/views/auth/TotpSetupView.vue'),
+    meta: { requiresAuth: true, mfaFlow: true, titleKey: 'pages.totp.setup_title' },
+  },
+  {
+    path: '/auth/2fa/challenge',
+    name: 'totp-challenge',
+    component: () => import('@/views/auth/TotpChallengeView.vue'),
+    meta: { requiresAuth: true, mfaFlow: true, titleKey: 'pages.totp.challenge_title' },
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/SettingsView.vue'),
+    meta: { requiresAuth: true, titleKey: 'pages.settings.title' },
+  },
 ]
 
 /**
- * Named-route guard enforcing `requiresAuth` / `requiresAnonymous` meta
- * against the current session. Exported so integration tests can import
- * the exact same function the real router wires up, instead of
- * reconstructing it inline and silently drifting.
+ * Named-route guard enforcing authentication and the MFA posture
+ * (`mfa_required` / `mfa_enrolled` / `mfa_verified`). Exported so
+ * integration tests can import the exact same function the real router
+ * wires up, instead of reconstructing it inline and silently drifting.
+ *
+ * Ordering matters: `requiresAuth` → `requiresAnonymous` → MFA gating.
+ * Routes with `mfaFlow: true` are always allowed for an authenticated
+ * user so the guard never loops (you can't send a user to the
+ * challenge page *from* the challenge page).
  */
 export function authGuard(to: RouteLocationNormalized): NavigationGuardReturn {
   const session = useSessionStore()
+
   if (to.meta.requiresAuth && !session.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.meta.requiresAnonymous && session.isAuthenticated) {
     return { name: 'dashboard' }
   }
+
+  // MFA enforcement: only protected, non-MFA routes redirect. The login
+  // flow routes the user into challenge / setup directly on success; this
+  // guard covers back-nav, refresh, or deep links that bypass login.
+  if (to.meta.requiresAuth && !to.meta.mfaFlow) {
+    if (session.needsStepUp) {
+      return { name: 'totp-challenge', query: { redirect: to.fullPath } }
+    }
+    if (session.needsEnrollment) {
+      return { name: 'totp-setup' }
+    }
+  }
+
   return true
 }
 
