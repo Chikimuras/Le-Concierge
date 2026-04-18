@@ -45,15 +45,26 @@
         <li
           v-for="m in session.memberships"
           :key="m.org_id"
-          class="flex items-center justify-between py-3 text-sm"
+          class="flex items-center justify-between gap-3 py-3 text-sm"
         >
-          <div>
-            <p class="font-medium">{{ m.org_name }}</p>
-            <p class="font-mono text-xs text-muted-foreground">{{ m.org_slug }}</p>
+          <div class="min-w-0">
+            <p class="truncate font-medium">{{ m.org_name }}</p>
+            <p class="truncate font-mono text-xs text-muted-foreground">{{ m.org_slug }}</p>
           </div>
-          <span class="rounded-sm bg-secondary px-2 py-0.5 text-xs font-medium uppercase">
-            {{ t(`auth.roles.${m.role}`) }}
-          </span>
+          <div class="flex items-center gap-2">
+            <span class="rounded-sm bg-secondary px-2 py-0.5 text-xs font-medium uppercase">
+              {{ t(`auth.roles.${m.role}`) }}
+            </span>
+            <RouterLink
+              v-slot="{ navigate }"
+              :to="{ name: 'property-list', params: { slug: m.org_slug } }"
+              custom
+            >
+              <Button variant="outline" size="sm" @click="navigate">
+                {{ t('properties.list.title') }}
+              </Button>
+            </RouterLink>
+          </div>
         </li>
       </ul>
       <p v-else class="mt-3 text-sm text-muted-foreground">
