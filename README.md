@@ -3,10 +3,15 @@
 SaaS concierge platform for short-term rentals (Airbnb, Booking.com, VRBO).
 Multi-tenant, security-first, 100% OSS stack. Solo-dev maintainable.
 
-> **Status:** Phase 3 — `apps/api` + `apps/web` + a local `docker compose`
-> stack (Postgres 16, Redis 7, MinIO; optionally api + Caddy via the `app`
-> profile). No migration, no auth yet. See `docs/adr/` for design decisions
-> and [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
+> **Status:** Phase 4c-1 done — TOTP 2FA backend. `/auth/2fa/{enroll/start,
+> enroll/verify, verify, disable}` with `totp-rs` (RFC 6238, SHA1/6
+> digits/30 s, ±1 skew), AES-256-GCM wrapping of secrets at rest
+> (`APP_AUTH__TOTP_KEY`), 10 Argon2id-hashed recovery codes per
+> enrollment, session ID rotation on step-up (ASVS 3.2.1). Previous
+> milestone: 4b-2 — password auth loop (backend + Vue 3 frontend). Next
+> up: Phase 4c-2 — the 2FA UI (enrollment QR, step-up challenge,
+> recovery-code screen) and Playwright E2E. See `docs/adr/` for design
+> decisions and [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
 
 ---
 

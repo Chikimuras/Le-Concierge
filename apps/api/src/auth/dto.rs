@@ -27,12 +27,19 @@ pub struct MembershipSummary {
 
 /// Body returned by successful authentication endpoints. The session
 /// cookie is set as a side-effect on the response headers.
+///
+/// `mfa_enrolled` + `mfa_required` + `session.mfa_verified` together
+/// tell the frontend what the user must do next: proceed, step up, or
+/// enroll (see ADR 0007).
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct AuthenticatedResponse {
     pub session: SessionMeta,
     pub user_id: UserId,
     pub memberships: Vec<MembershipSummary>,
     pub is_platform_admin: bool,
+
+    pub mfa_enrolled: bool,
+    pub mfa_required: bool,
 }
 
 // ---- Signup ----------------------------------------------------------------
@@ -71,6 +78,16 @@ pub struct MeResponse {
     pub user_id: UserId,
     pub memberships: Vec<MembershipSummary>,
     pub is_platform_admin: bool,
+
+    /// `true` when this user has an **active** 2FA enrollment. Drives the
+    /// frontend's "enter your code" vs "enroll now" split.
+    pub mfa_enrolled: bool,
+    /// `true` for users whose role (manager, or platform admin) makes
+    /// 2FA mandatory per CLAUDE.md §3.1. An unenrolled user for whom
+    /// this is `true` must be routed through enrollment before any
+    /// other protected action.
+    pub mfa_required: bool,
+
     /// When the current session's idle window was last refreshed. Mostly
     /// informational for the frontend to decide when to poll.
     pub resolved_at: DateTime<Utc>,

@@ -62,6 +62,19 @@ pub fn hash_password(plain: &str, pepper: &SecretString) -> Result<PasswordHash,
     if plain.len() < MIN_PASSWORD_LEN {
         return Err(AuthError::WeakPassword);
     }
+    hash_secret(plain, pepper)
+}
+
+/// Hash an arbitrary high-entropy secret with Argon2id + pepper. Skips
+/// the [`MIN_PASSWORD_LEN`] guard — the caller is responsible for the
+/// entropy budget. Used for recovery codes (8 chars, ~39 bits, sampled
+/// from a CSPRNG) where the length policy does not apply.
+///
+/// # Errors
+///
+/// Returns [`AuthError::Hashing`] on an underlying Argon2id failure —
+/// in normal operation, only a misconfigured pepper triggers this.
+pub fn hash_secret(plain: &str, pepper: &SecretString) -> Result<PasswordHash, AuthError> {
     let salt = SaltString::generate(&mut OsRng);
     let argon = hasher(pepper)?;
     let phc = argon

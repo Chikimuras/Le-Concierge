@@ -106,6 +106,13 @@ pub struct AuthConfig {
     ///
     /// `SecretString` redacts itself in `Debug` and zeroes on drop.
     pub pepper: SecretString,
+
+    /// 32-byte AES-256-GCM key (hex-encoded, 64 chars) used to wrap TOTP
+    /// shared secrets at rest. Separate from the password pepper so a
+    /// rotation of either does not invalidate the other (ADR 0007).
+    /// Generate with `openssl rand -hex 32`; the api fails closed if the
+    /// value is missing or cannot decode to exactly 32 bytes.
+    pub totp_key: SecretString,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -189,10 +196,11 @@ impl Config {
             "cors": {
                 "allowed_origins_count": self.cors.allowed_origins.len(),
             },
-            // `auth.pepper` is intentionally omitted — it is a secret
-            // (CLAUDE.md §3.3).
+            // `auth.pepper` and `auth.totp_key` are intentionally omitted —
+            // both are secrets (CLAUDE.md §3.3).
             "auth": {
                 "pepper_configured": true,
+                "totp_key_configured": true,
             },
             "session": {
                 "idle_ttl_secs": self.session.idle_ttl_secs,
@@ -238,6 +246,9 @@ mod tests {
             },
             auth: AuthConfig {
                 pepper: SecretString::from("dangerous-test-pepper-never-use-in-prod"),
+                totp_key: SecretString::from(
+                    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                ),
             },
             session: SessionConfig {
                 idle_ttl_secs: 3600,
@@ -262,6 +273,10 @@ mod tests {
         assert!(
             !summary.contains("dangerous-test-pepper"),
             "auth pepper must never appear in log summaries"
+        );
+        assert!(
+            !summary.contains("00112233"),
+            "TOTP encryption key must never appear in log summaries"
         );
         assert!(
             !summary.contains("redis.example"),

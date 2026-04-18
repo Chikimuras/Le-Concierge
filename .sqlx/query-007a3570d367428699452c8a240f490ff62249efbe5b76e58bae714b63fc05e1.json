@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE user_totp_recovery_codes\n               SET used_at = now()\n             WHERE id = $1\n               AND used_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "007a3570d367428699452c8a240f490ff62249efbe5b76e58bae714b63fc05e1"
+}

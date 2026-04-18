@@ -64,6 +64,9 @@ fn test_config(db_url: String, redis_url: String) -> Config {
         },
         auth: AuthConfig {
             pepper: SecretString::from("dangerous-test-pepper-never-use-in-prod"),
+            totp_key: SecretString::from(
+                "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+            ),
         },
         session: SessionConfig {
             idle_ttl_secs: 600,

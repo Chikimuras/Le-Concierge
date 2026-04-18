@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT secret_cipher\n              FROM user_totp\n             WHERE user_id = $1\n               AND enrolled_at IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "secret_cipher",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ddcb0ca492719920f2cc9d9fade41506d2feee4e6740953fb77c7fa3ad3af235"
+}

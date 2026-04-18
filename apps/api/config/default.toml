@@ -33,9 +33,11 @@ service_name = "api"
 allowed_origins = []
 
 # The `[auth]` section is intentionally omitted from the TOML baseline:
-# `auth.pepper` is a secret (CLAUDE.md §3.1 / ADR 0005) and must be supplied
-# via `APP_AUTH__PEPPER` env var (or Docker secret in prod). A missing
-# pepper makes `Config::load()` fail closed, which is the desired default.
+# both `auth.pepper` (password hashing pepper) and `auth.totp_key` (AES-256
+# key wrapping TOTP secrets at rest) are secrets (CLAUDE.md §3.1, ADR 0005
+# / 0007) and must be supplied via `APP_AUTH__PEPPER` / `APP_AUTH__TOTP_KEY`
+# env vars (or Docker secrets in prod). Missing values make `Config::load()`
+# fail closed, which is the desired default.
 
 [session]
 idle_ttl_secs = 604800        # 7 days — the idle cut-off
