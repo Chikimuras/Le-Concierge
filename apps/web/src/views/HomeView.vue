@@ -1,19 +1,19 @@
 <script setup lang="ts">
-  import { CheckCircle2, Loader2, Moon, Sun, SunMoon, XCircle } from 'lucide-vue-next'
+  import { ArrowRight, CheckCircle2, Loader2, Moon, Sun, SunMoon, XCircle } from 'lucide-vue-next'
   import { computed, type Component } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { RouterLink } from 'vue-router'
 
+  import Button from '@/components/ui/Button.vue'
   import { useHealth } from '@/composables/useHealth'
   import { useTheme, type ThemeMode } from '@/composables/useTheme'
   import { cn } from '@/lib/utils'
+  import { useSessionStore } from '@/stores/session'
 
   const { t } = useI18n()
   const { mode, setMode } = useTheme()
+  const session = useSessionStore()
 
-  // Destructure refs so the template can consume them as top-level values
-  // (Vue auto-unwraps refs bound directly to the setup scope). Keeping the
-  // whole `UseQueryReturnType` and accessing `.value` from the template is
-  // brittle across minor versions of @tanstack/vue-query.
   const { isPending, isError, data } = useHealth()
 
   const statusLabel = computed(() => {
@@ -79,6 +79,28 @@
         <dt class="text-muted-foreground">{{ t('pages.home.api_version') }}</dt>
         <dd class="font-mono">{{ data.version }}</dd>
       </dl>
+    </section>
+
+    <section class="flex w-full flex-wrap items-center gap-3" aria-label="Auth actions">
+      <RouterLink
+        v-if="session.isAuthenticated"
+        v-slot="{ navigate }"
+        :to="{ name: 'dashboard' }"
+        custom
+      >
+        <Button @click="navigate">
+          {{ t('pages.home.go_to_dashboard') }}
+          <ArrowRight class="size-4" aria-hidden="true" />
+        </Button>
+      </RouterLink>
+      <template v-else>
+        <RouterLink v-slot="{ navigate }" :to="{ name: 'login' }" custom>
+          <Button variant="default" @click="navigate">{{ t('auth.login.cta') }}</Button>
+        </RouterLink>
+        <RouterLink v-slot="{ navigate }" :to="{ name: 'signup' }" custom>
+          <Button variant="outline" @click="navigate">{{ t('auth.signup.cta') }}</Button>
+        </RouterLink>
+      </template>
     </section>
 
     <section class="w-full" aria-label="Theme">

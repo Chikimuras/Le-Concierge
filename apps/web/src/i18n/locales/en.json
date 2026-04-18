@@ -11,7 +11,21 @@
       "api_status_ok": "Healthy",
       "api_status_error": "Unavailable",
       "api_service": "Service",
-      "api_version": "Version"
+      "api_version": "Version",
+      "go_to_dashboard": "Go to dashboard"
+    },
+    "login": {
+      "title": "Login"
+    },
+    "signup": {
+      "title": "Sign up"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "organizations": "Organizations",
+      "no_orgs": "No organization yet.",
+      "platform_admin": "Platform administration",
+      "platform_admin_body": "You have access to cross-tenant operations."
     }
   },
   "theme": {
@@ -19,5 +33,57 @@
     "system": "System",
     "light": "Light",
     "dark": "Dark"
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "org_name": "Organization name",
+      "org_slug": "Organization slug",
+      "org_slug_hint": "Lowercase letters, digits and dashes, 2 to 64 characters."
+    },
+    "validation": {
+      "email_required": "Email is required.",
+      "email_invalid": "Invalid email address.",
+      "password_required": "Password is required.",
+      "password_min": "At least {min} characters.",
+      "org_name_required": "Organization name is required.",
+      "org_name_too_long": "Maximum {max} characters.",
+      "slug_invalid": "Invalid slug (lowercase letters, digits, dashes)."
+    },
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Access your concierge workspace.",
+      "submit": "Sign in",
+      "cta": "Sign in",
+      "no_account": "No account yet?",
+      "errors": {
+        "unauthorized": "Invalid credentials or account locked.",
+        "rate_limited": "Too many attempts. Try again in a few minutes.",
+        "generic": "Sign-in failed. Please try again shortly."
+      }
+    },
+    "signup": {
+      "title": "Create an account",
+      "subtitle": "Get your concierge running in seconds.",
+      "submit": "Create account",
+      "cta": "Create account",
+      "has_account": "Already have an account?",
+      "errors": {
+        "generic": "Could not create the account. Please check your inputs.",
+        "conflict": "This email or organization slug is already taken.",
+        "rate_limited": "Too many attempts. Try again in a few minutes."
+      }
+    },
+    "logout": {
+      "submit": "Sign out"
+    },
+    "roles": {
+      "owner": "Owner",
+      "manager": "Manager",
+      "cleaner": "Cleaner",
+      "guest": "Guest",
+      "admin": "Admin"
+    }
   }
 }
