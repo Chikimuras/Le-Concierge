@@ -39,6 +39,12 @@
       "list_title": "Biens",
       "new_title": "Nouveau bien",
       "detail_title": "Détail du bien"
+    },
+    "team": {
+      "title": "Équipe"
+    },
+    "accept_invite": {
+      "title": "Invitation"
     }
   },
   "theme": {
@@ -200,6 +206,53 @@
     "errors": {
       "conflict": "Cet identifiant de bien est déjà utilisé dans cette organisation.",
       "not_found": "Bien introuvable.",
+      "generic": "Opération impossible. Réessayez."
+    }
+  },
+  "team": {
+    "title": "Équipe",
+    "subtitle": "Invitez des collègues à rejoindre votre organisation.",
+    "section_pending": "Invitations en attente",
+    "section_create": "Inviter un membre",
+    "empty": "Aucune invitation en attente.",
+    "form": {
+      "email": "E-mail",
+      "role": "Rôle",
+      "submit": "Envoyer l'invitation",
+      "sent": "Invitation envoyée."
+    },
+    "table": {
+      "email": "E-mail",
+      "role": "Rôle",
+      "sent": "Envoyée le",
+      "expires": "Expire le",
+      "cancel": "Annuler"
+    },
+    "errors": {
+      "conflict": "Une invitation est déjà en attente pour cet email.",
+      "invalid_email": "E-mail invalide.",
+      "invalid_role": "Rôle invalide.",
+      "generic": "Opération impossible. Réessayez."
+    }
+  },
+  "accept_invite": {
+    "title": "Acceptation de l'invitation",
+    "loading": "Chargement de l'invitation…",
+    "invited_as": "Vous êtes invité·e comme {role} chez {org}.",
+    "expires_at": "Cette invitation expire le {date}.",
+    "login_required": "Un compte avec cet email existe déjà. Connectez-vous pour accepter.",
+    "go_to_login": "Se connecter",
+    "accept": "Accepter l'invitation",
+    "accepted": "Invitation acceptée.",
+    "signup_title": "Créer votre compte",
+    "signup_hint": "L'adresse {email} a été fixée par l'invitation.",
+    "signup_password": "Mot de passe",
+    "signup_submit": "Créer le compte et rejoindre",
+    "errors": {
+      "missing_token": "Jeton d'invitation manquant dans l'URL.",
+      "not_found": "Cette invitation n'existe pas ou a été annulée.",
+      "expired": "Cette invitation a expiré. Demandez-en une nouvelle.",
+      "email_mismatch": "L'e-mail de votre session ne correspond pas à celui de l'invitation.",
       "generic": "Opération impossible. Réessayez."
     }
   }

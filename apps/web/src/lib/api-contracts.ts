@@ -70,6 +70,7 @@ export const problemKindSchema = z.enum([
   'validation',
   'conflict',
   'rate_limited',
+  'gone',
   'unavailable',
   'internal',
 ])
@@ -181,6 +182,55 @@ export interface EnrollVerifyResponse {
  *  flag set when the caller consumed a recovery code (UI warns them). */
 export interface TotpVerifyResponse extends AuthenticatedResponse {
   used_recovery_code: boolean
+}
+
+// ---- Team invites (Phase 5b) -----------------------------------------------
+
+/** Roles an invite can assign. `owner` is rejected server-side; omit
+ *  from the UI selector to avoid confusion. `admin` is platform-level,
+ *  not invitable. */
+export const invitableRoleSchema = z.enum(['manager', 'cleaner', 'guest'])
+export type InvitableRole = z.infer<typeof invitableRoleSchema>
+
+/** Invite as exposed to the manager UI. Token is never serialised. */
+export interface Invite {
+  id: string
+  org_id: string
+  email: string
+  role: Role
+  expires_at: string
+  created_at: string
+}
+
+export interface InviteListResponse {
+  invites: Invite[]
+}
+
+/** `POST /auth/invites/preview` response — non-sensitive metadata the
+ *  invitee can see before sign-up / accept. */
+export interface InvitePreview {
+  email: string
+  org_name: string
+  role: Role
+  expires_at: string
+}
+
+export function createInviteSchema(messages: {
+  emailRequired: string
+  emailInvalid: string
+  roleRequired: string
+}) {
+  return z.object({
+    email: z.string().min(1, messages.emailRequired).email(messages.emailInvalid),
+    role: invitableRoleSchema.refine((_) => true, { message: messages.roleRequired }),
+  })
+}
+
+/** Password-only schema — the email is read from the invite server-side. */
+export function signupAndAcceptSchema(messages: { passwordMin: string }) {
+  return z.object({
+    password: z.string().min(PASSWORD_MIN, messages.passwordMin),
+  })
 }
 
 // ---- Properties (Phase 5a) ------------------------------------------------

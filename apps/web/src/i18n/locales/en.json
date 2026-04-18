@@ -39,6 +39,12 @@
       "list_title": "Properties",
       "new_title": "New property",
       "detail_title": "Property detail"
+    },
+    "team": {
+      "title": "Team"
+    },
+    "accept_invite": {
+      "title": "Invitation"
     }
   },
   "theme": {
@@ -200,6 +206,53 @@
     "errors": {
       "conflict": "This property slug is already used in this organization.",
       "not_found": "Property not found.",
+      "generic": "Operation failed. Please retry."
+    }
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Invite colleagues to join your organization.",
+    "section_pending": "Pending invitations",
+    "section_create": "Invite a member",
+    "empty": "No pending invitations.",
+    "form": {
+      "email": "Email",
+      "role": "Role",
+      "submit": "Send invitation",
+      "sent": "Invitation sent."
+    },
+    "table": {
+      "email": "Email",
+      "role": "Role",
+      "sent": "Sent",
+      "expires": "Expires",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "conflict": "An invitation is already pending for this email.",
+      "invalid_email": "Invalid email.",
+      "invalid_role": "Invalid role.",
+      "generic": "Operation failed. Please retry."
+    }
+  },
+  "accept_invite": {
+    "title": "Accept invitation",
+    "loading": "Loading invitation…",
+    "invited_as": "You are invited as a {role} of {org}.",
+    "expires_at": "This invitation expires on {date}.",
+    "login_required": "An account already exists for this email. Sign in to accept.",
+    "go_to_login": "Sign in",
+    "accept": "Accept invitation",
+    "accepted": "Invitation accepted.",
+    "signup_title": "Create your account",
+    "signup_hint": "The email {email} is fixed by the invitation.",
+    "signup_password": "Password",
+    "signup_submit": "Create account and join",
+    "errors": {
+      "missing_token": "Missing invitation token in URL.",
+      "not_found": "This invitation does not exist or was cancelled.",
+      "expired": "This invitation has expired. Ask for a new one.",
+      "email_mismatch": "Your session email does not match this invitation.",
       "generic": "Operation failed. Please retry."
     }
   }
