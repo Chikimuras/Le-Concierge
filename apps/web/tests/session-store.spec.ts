@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { AuthenticatedResponse } from '@/lib/api-contracts'
 import { useSessionStore } from '@/stores/session'
 
-function authPayload(): AuthenticatedResponse {
+function authPayload(overrides: Partial<AuthenticatedResponse> = {}): AuthenticatedResponse {
   return {
     session: {
       user_id: '11111111-1111-4111-8111-111111111111',
@@ -23,6 +23,9 @@ function authPayload(): AuthenticatedResponse {
       },
     ],
     is_platform_admin: false,
+    mfa_enrolled: false,
+    mfa_required: false,
+    ...overrides,
   }
 }
 
@@ -37,6 +40,8 @@ describe('session store', () => {
     expect(s.userId).toBeNull()
     expect(s.csrfToken).toBeNull()
     expect(s.hydrated).toBe(false)
+    expect(s.mfaEnrolled).toBe(false)
+    expect(s.mfaRequired).toBe(false)
   })
 
   it('setFromAuth populates everything and flips isAuthenticated', () => {
@@ -57,6 +62,8 @@ describe('session store', () => {
     expect(s.userId).toBeNull()
     expect(s.csrfToken).toBeNull()
     expect(s.memberships).toHaveLength(0)
+    expect(s.mfaEnrolled).toBe(false)
+    expect(s.mfaRequired).toBe(false)
     // We *did* answer the "is the user logged in?" question — answer is no.
     expect(s.hydrated).toBe(true)
   })
@@ -67,5 +74,56 @@ describe('session store', () => {
     expect(s.hasRoleIn('22222222-2222-4222-8222-222222222222', 'owner')).toBe(true)
     expect(s.hasRoleIn('22222222-2222-4222-8222-222222222222', 'manager')).toBe(false)
     expect(s.hasRoleIn('00000000-0000-0000-0000-000000000000', 'owner')).toBe(false)
+  })
+
+  it('mfaCleared is true when user is not enrolled', () => {
+    const s = useSessionStore()
+    s.setFromAuth(authPayload({ mfa_enrolled: false }))
+    expect(s.mfaCleared).toBe(true)
+    expect(s.needsStepUp).toBe(false)
+  })
+
+  it('mfaCleared is false for enrolled user pre step-up', () => {
+    const s = useSessionStore()
+    s.setFromAuth(
+      authPayload({
+        mfa_enrolled: true,
+        session: {
+          user_id: '11111111-1111-4111-8111-111111111111',
+          csrf_token: 'a'.repeat(43),
+          mfa_verified: false,
+          created_at: '2026-04-18T10:00:00Z',
+          absolute_expires_at: '2026-05-18T10:00:00Z',
+        },
+      }),
+    )
+    expect(s.mfaCleared).toBe(false)
+    expect(s.needsStepUp).toBe(true)
+    expect(s.needsEnrollment).toBe(false)
+  })
+
+  it('mfaCleared is true once step-up completes', () => {
+    const s = useSessionStore()
+    s.setFromAuth(
+      authPayload({
+        mfa_enrolled: true,
+        session: {
+          user_id: '11111111-1111-4111-8111-111111111111',
+          csrf_token: 'a'.repeat(43),
+          mfa_verified: true,
+          created_at: '2026-04-18T10:00:00Z',
+          absolute_expires_at: '2026-05-18T10:00:00Z',
+        },
+      }),
+    )
+    expect(s.mfaCleared).toBe(true)
+    expect(s.needsStepUp).toBe(false)
+  })
+
+  it('needsEnrollment flips on for a required but unenrolled user', () => {
+    const s = useSessionStore()
+    s.setFromAuth(authPayload({ mfa_required: true, mfa_enrolled: false }))
+    expect(s.needsEnrollment).toBe(true)
+    expect(s.needsStepUp).toBe(false)
   })
 })

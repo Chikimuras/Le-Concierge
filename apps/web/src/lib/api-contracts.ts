@@ -41,6 +41,10 @@ export interface AuthenticatedResponse {
   user_id: string
   memberships: MembershipSummary[]
   is_platform_admin: boolean
+  /** True when the user has an active 2FA enrollment. */
+  mfa_enrolled: boolean
+  /** True when the user's role makes 2FA mandatory (admin/manager). */
+  mfa_required: boolean
 }
 
 export interface MeResponse extends AuthenticatedResponse {
@@ -123,4 +127,58 @@ export function signupRequestSchema(messages: {
       .max(ORG_SLUG_MAX)
       .regex(ORG_SLUG_REGEX, messages.slugInvalid),
   })
+}
+
+// ---- TOTP 2FA (Phase 4c) --------------------------------------------------
+
+/** Length of a raw TOTP code (RFC 6238 default) — 6 decimal digits. */
+export const TOTP_CODE_LEN = 6
+/** Recovery codes: 8 chars, sampled from a confusable-free alphabet. */
+export const RECOVERY_CODE_LEN = 8
+
+/** Accepts a 6-digit TOTP code or an 8-char recovery code (dash optional,
+ *  case-insensitive). Used for the step-up flow; enrollment verify only
+ *  accepts TOTP. */
+export function totpVerifyRequestSchema(messages: { codeInvalid: string }) {
+  return z.object({
+    code: z
+      .string()
+      .transform((v) => v.replace(/[\s-]/g, '').toUpperCase())
+      .pipe(z.string().regex(/^(\d{6}|[A-Z0-9]{8})$/, messages.codeInvalid)),
+  })
+}
+
+/** Strict 6-digit TOTP for `POST /auth/2fa/enroll/verify`. */
+export function totpEnrollVerifySchema(messages: { codeInvalid: string }) {
+  return z.object({
+    code: z.string().regex(/^\d{6}$/, messages.codeInvalid),
+  })
+}
+
+/** Password + current TOTP. Password is just `min(1)` — the server
+ *  verifies the real password hash, the client just forwards. */
+export function disableRequestSchema(messages: { passwordRequired: string; codeInvalid: string }) {
+  return z.object({
+    password: z.string().min(1, messages.passwordRequired),
+    code: z.string().regex(/^\d{6}$/, messages.codeInvalid),
+  })
+}
+
+export interface EnrollStartResponse {
+  /** `otpauth://totp/...` URL ready for QR rendering. */
+  otpauth_url: string
+  /** Base32-encoded secret for manual authenticator entry. */
+  secret_base32: string
+}
+
+export interface EnrollVerifyResponse {
+  /** 10 single-use recovery codes in `XXXX-XXXX` form. Server never
+   *  returns them again — surface to the user immediately. */
+  recovery_codes: string[]
+}
+
+/** `POST /auth/2fa/verify` body: flattened AuthenticatedResponse plus a
+ *  flag set when the caller consumed a recovery code (UI warns them). */
+export interface TotpVerifyResponse extends AuthenticatedResponse {
+  used_recovery_code: boolean
 }
