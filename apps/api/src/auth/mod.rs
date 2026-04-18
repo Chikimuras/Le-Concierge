@@ -13,12 +13,14 @@
 //! (session management).
 
 pub mod domain;
+pub mod dto;
 pub mod error;
 pub mod hash;
 pub mod repo;
+pub mod routes;
 pub mod service;
 
 pub use domain::{Email, OrgId, PasswordHash, Role, Slug, UserId};
 pub use error::AuthError;
 pub use repo::AuthRepo;
-pub use service::{AuthService, SignupInput, SignupOutcome};
+pub use service::{AuthService, LoginInput, SessionIssue, SignupInput, SignupOutcome, UserContext};

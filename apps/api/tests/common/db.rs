@@ -20,6 +20,7 @@ use testcontainers_modules::postgres::Postgres;
 pub struct TestDatabase {
     _container: ContainerAsync<Postgres>,
     pub pool: PgPool,
+    pub url: String,
 }
 
 impl TestDatabase {
@@ -51,6 +52,7 @@ impl TestDatabase {
         Self {
             _container: container,
             pool,
+            url,
         }
     }
 }

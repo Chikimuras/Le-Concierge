@@ -2,21 +2,35 @@
 //!
 //! Each `#[tokio::test]` that needs the real HTTP server calls
 //! [`spawn_app`] to obtain an isolated instance listening on a random
-//! loopback port. The database pool is lazy, so tests that do not touch
-//! the DB (such as those for `/healthz`) run without requiring Postgres.
+//! loopback port. Postgres and Redis both run in per-suite
+//! testcontainers — CLAUDE.md §4.2 forbids mocking either.
 
 #![allow(dead_code, clippy::unwrap_used, clippy::expect_used)] // test harness
 
 pub mod db;
+pub mod redis;
+
+use std::{net::SocketAddr, time::Duration};
 
 use api::{
     AppState, Config, build_app,
-    config::{AuthConfig, CorsConfig, DatabaseConfig, HttpConfig, LogFormat, TelemetryConfig},
+    config::{
+        AuthConfig, CorsConfig, DatabaseConfig, HttpConfig, LogFormat, RedisConfig, SessionConfig,
+        TelemetryConfig,
+    },
+    session::SessionService,
 };
 use secrecy::SecretString;
 
+use crate::common::{db::TestDatabase, redis::TestRedis};
+
+/// Test handle bundling the live HTTP server plus the ephemeral
+/// Postgres and Redis containers it sits on. Dropping the value stops
+/// the server and tears the containers down.
 pub struct TestApp {
     pub base_url: String,
+    pub db: TestDatabase,
+    pub redis: TestRedis,
 }
 
 impl TestApp {
@@ -25,19 +39,18 @@ impl TestApp {
     }
 }
 
-/// Build a config suitable for tests. Uses a deliberately invalid DB URL
-/// that the lazy pool never attempts to connect to as long as no handler
-/// issues a query.
-fn test_config() -> Config {
+/// Build a plausible test config. DB and Redis URLs come from the
+/// caller-owned containers; every other value is a safe static default.
+fn test_config(db_url: String, redis_url: String) -> Config {
     Config {
         http: HttpConfig {
             bind: "127.0.0.1:0".parse().expect("valid test bind"),
-            request_timeout_secs: 10,
+            request_timeout_secs: 30,
             public_base_url: "http://localhost".into(),
         },
         database: DatabaseConfig {
-            url: "postgres://test:test@127.0.0.1:54329/test".into(),
-            max_connections: 1,
+            url: db_url,
+            max_connections: 5,
             min_connections: 0,
             statement_timeout_secs: 5,
         },
@@ -52,12 +65,30 @@ fn test_config() -> Config {
         auth: AuthConfig {
             pepper: SecretString::from("dangerous-test-pepper-never-use-in-prod"),
         },
+        session: SessionConfig {
+            idle_ttl_secs: 600,
+            absolute_ttl_secs: 3600,
+            cookie_secure: false,
+            cookie_domain: None,
+        },
+        redis: RedisConfig { url: redis_url },
     }
 }
 
-/// Spin up the real app on an OS-assigned loopback port and return its base URL.
+/// Spin up Postgres + Redis containers and the real app on an
+/// OS-assigned loopback port.
 pub async fn spawn_app() -> TestApp {
-    let state = AppState::new(test_config()).expect("AppState::new");
+    let db = TestDatabase::spawn().await;
+    let redis = TestRedis::spawn().await;
+
+    let config = test_config(db.url.clone(), redis.url.clone());
+    let session = SessionService::new(
+        redis.store.clone(),
+        Duration::from_secs(config.session.idle_ttl_secs),
+        Duration::from_secs(config.session.absolute_ttl_secs),
+    );
+
+    let state = AppState::from_parts(config, db.pool.clone(), session);
     let app = build_app(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -66,10 +97,16 @@ pub async fn spawn_app() -> TestApp {
     let addr = listener.local_addr().expect("local_addr");
 
     tokio::spawn(async move {
-        let _ = axum::serve(listener, app).await;
+        let _ = axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await;
     });
 
     TestApp {
         base_url: format!("http://{addr}"),
+        db,
+        redis,
     }
 }

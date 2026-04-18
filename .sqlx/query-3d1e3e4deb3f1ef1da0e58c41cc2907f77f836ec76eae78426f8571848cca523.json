@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE users\n               SET failed_login_attempts = failed_login_attempts + 1\n             WHERE id = $1\n         RETURNING failed_login_attempts\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "failed_login_attempts",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3d1e3e4deb3f1ef1da0e58c41cc2907f77f836ec76eae78426f8571848cca523"
+}

@@ -36,3 +36,15 @@ allowed_origins = []
 # `auth.pepper` is a secret (CLAUDE.md §3.1 / ADR 0005) and must be supplied
 # via `APP_AUTH__PEPPER` env var (or Docker secret in prod). A missing
 # pepper makes `Config::load()` fail closed, which is the desired default.
+
+[session]
+idle_ttl_secs = 604800        # 7 days — the idle cut-off
+absolute_ttl_secs = 2592000   # 30 days — the hard cap
+# Dev overrides to `false` so cookies flow over plain HTTP. In prod, HTTPS
+# is mandatory (CLAUDE.md §3.2) — override via APP_SESSION__COOKIE_SECURE=true.
+cookie_secure = false
+# cookie_domain = "leconcierge.fr"  # leave unset to pin to origin
+
+[redis]
+# Matches the compose stack default. Override via APP_REDIS__URL in prod.
+url = "redis://127.0.0.1:6379/"

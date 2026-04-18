@@ -8,6 +8,7 @@
 use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::auth::error::AuthError;
@@ -18,10 +19,11 @@ macro_rules! uuid_newtype {
     ($(#[$meta:meta])* $name:ident) => {
         $(#[$meta])*
         #[derive(
-            Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type,
+            Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type, ToSchema,
         )]
         #[serde(transparent)]
         #[sqlx(transparent)]
+        #[schema(value_type = String, format = Uuid, example = "00000000-0000-4000-8000-000000000000")]
         pub struct $name(pub Uuid);
 
         impl $name {
@@ -77,9 +79,10 @@ uuid_newtype!(
 ///
 /// Platform admin is **not** represented here: see the `platform_admins`
 /// table. See `CLAUDE.md` §1 and ADR 0005.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type, ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "role", rename_all = "lowercase")]
+#[schema(example = "owner")]
 pub enum Role {
     Owner,
     Manager,

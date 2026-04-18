@@ -5,12 +5,14 @@
 //! [`app::build_app`] from tests rather than running `main.rs` directly.
 
 pub mod app;
+pub mod audit;
 pub mod auth;
 pub mod config;
 pub mod error;
 pub mod health;
 pub mod middleware;
 pub mod openapi;
+pub mod session;
 pub mod state;
 pub mod telemetry;
 

@@ -27,6 +27,7 @@ tokio = { version = "1.41", features = ["macros", "rt-multi-thread", "signal", "
 
 # --- http framework ----------------------------------------------------------
 axum = { version = "0.8", features = ["macros", "http2", "tokio"] }
+axum-extra = { version = "0.10", features = ["cookie", "typed-header"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = [
     "trace",
@@ -40,6 +41,11 @@ tower-http = { version = "0.6", features = [
     "propagate-header",
     "catch-panic",
 ] }
+# Rate limiting for /auth/* — in-memory state; multi-instance needs a
+# Redis-backed store (deferred, ADR 0006). Must track axum 0.8's
+# axum_core 0.5 to avoid two versions of the crate in the dep graph;
+# tower_governor 0.7+ migrated.
+tower_governor = "0.7"
 http = "1"
 
 # --- serialization -----------------------------------------------------------
@@ -75,6 +81,7 @@ sqlx = { version = "0.8", default-features = false, features = [
     "postgres",
     "uuid",
     "chrono",
+    "json",
     "macros",
     "migrate",
 ] }
@@ -91,16 +98,34 @@ argon2 = { version = "0.5", features = ["std"] }
 secrecy = { version = "0.10", features = ["serde"] }
 email_address = "0.2"
 
+# --- sessions / redis --------------------------------------------------------
+# Opaque server-side sessions (no JWT, CLAUDE.md §3.1 / ADR 0006). `redis`
+# is the canonical client; we use the tokio async API through a connection
+# manager (auto-reconnect, pooling).
+redis = { version = "0.27", default-features = false, features = [
+    "tokio-comp",
+    "connection-manager",
+] }
+# SHA-256 for the audit hash chain. `rand` for CSPRNG-based session IDs.
+# `base64` encodes those IDs for the `lc_sid` cookie. `time` provides the
+# `Duration` type expected by the `cookie` crate (pulled in transitively
+# by `axum-extra`).
+sha2 = "0.10"
+rand = "0.8"
+base64 = "0.22"
+time = "0.3"
+
 # --- misc --------------------------------------------------------------------
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 
 [dev-dependencies]
 # End-to-end integration tests spawn the real app and hit it over HTTP.
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# `cookies` enables the cookie jar used by the auth-flow tests.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "cookies"] }
 tokio = { version = "1.41", features = ["full", "test-util"] }
 
-# Ephemeral Postgres containers for DB-backed integration tests. CLAUDE.md
-# §4.2 forbids mocking the DB.
+# Ephemeral Postgres + Redis containers for DB-backed integration tests.
+# CLAUDE.md §4.2 forbids mocking the DB.
 testcontainers = "0.23"
-testcontainers-modules = { version = "0.11", features = ["postgres"] }
+testcontainers-modules = { version = "0.11", features = ["postgres", "redis"] }

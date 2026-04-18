@@ -1,14 +1,16 @@
-//! Integration tests for the `auth` domain.
+//! Repo-level integration tests for the `auth` domain.
 //!
-//! Each test boots a fresh Postgres container (via `testcontainers-modules`),
-//! applies every migration, and exercises [`AuthService::signup_organization`]
-//! end-to-end. No DB mock, per `CLAUDE.md` §4.2.
+//! Each test boots a fresh Postgres container, runs every migration, and
+//! exercises [`AuthRepo`] directly. The HTTP-facing behaviour of the
+//! wider [`AuthService`] (including session creation and audit events)
+//! is covered by `tests/auth_http.rs`, which also spins up Redis.
 
 #![allow(clippy::expect_used, clippy::unwrap_used)] // test assertions
 
 mod common;
 
-use api::auth::{AuthError, AuthRepo, AuthService, SignupInput};
+use api::auth::domain::{Email, PasswordHash, Slug};
+use api::auth::{AuthError, AuthRepo};
 use secrecy::SecretString;
 use sqlx::PgPool;
 
@@ -21,152 +23,173 @@ async fn count_users(pool: &PgPool) -> i64 {
         .expect("count users")
 }
 
-fn service_for(db: &TestDatabase) -> AuthService {
-    AuthService::new(
-        AuthRepo::new(db.pool.clone()),
-        SecretString::from("test-pepper-long-enough-for-integration"),
-    )
-}
-
-fn valid_signup() -> SignupInput {
-    SignupInput {
-        email: "owner@example.test".into(),
-        password: "correct-horse-battery-staple".into(),
-        organization_slug: "acme".into(),
-        organization_name: "Acme Concierge".into(),
-    }
+/// Produce a throw-away hash so tests don't pay for a real Argon2 round
+/// on every run.
+fn stub_hash() -> PasswordHash {
+    let pepper = SecretString::from("stub-test-pepper-for-integration-runs");
+    api::auth::hash::hash_password("correct-horse-battery-staple", &pepper).expect("hash ok")
 }
 
 #[tokio::test]
-async fn signup_creates_org_user_and_owner_membership() {
+async fn create_org_persists_org_user_and_owner_membership() {
     let db = TestDatabase::spawn().await;
-    let svc = service_for(&db);
+    let repo = AuthRepo::new(db.pool.clone());
+    let email = Email::parse("owner@example.test").expect("valid");
+    let slug = Slug::parse("acme").expect("valid");
 
-    let outcome = svc
-        .signup_organization(valid_signup())
+    let (org_id, user_id) = repo
+        .create_organization_with_owner(&email, &stub_hash(), &slug, "Acme Conciergerie")
         .await
-        .expect("signup ok");
+        .expect("create ok");
 
-    // Organization exists with the expected slug.
-    let org_slug: String = sqlx::query_scalar!(
-        "SELECT slug FROM organizations WHERE id = $1",
-        outcome.organization_id.into_inner()
-    )
-    .fetch_one(&db.pool)
-    .await
-    .expect("org row present");
-    assert_eq!(org_slug, "acme");
+    let (db_slug,): (String,) = sqlx::query_as("SELECT slug FROM organizations WHERE id = $1")
+        .bind(org_id.into_inner())
+        .fetch_one(&db.pool)
+        .await
+        .expect("org present");
+    assert_eq!(db_slug, "acme");
 
-    // User exists, email is lowercased, hash is a PHC-format Argon2id string.
-    let (email, password_hash): (String, String) =
-        sqlx::query_as("SELECT email::text, password_hash FROM users WHERE id = $1")
-            .bind(outcome.owner_user_id.into_inner())
-            .fetch_one(&db.pool)
-            .await
-            .expect("user row present");
-    assert_eq!(email, "owner@example.test");
-    assert!(
-        password_hash.starts_with("$argon2id$"),
-        "expected Argon2id PHC hash, got {password_hash}",
-    );
+    let (db_email,): (String,) = sqlx::query_as("SELECT email::text FROM users WHERE id = $1")
+        .bind(user_id.into_inner())
+        .fetch_one(&db.pool)
+        .await
+        .expect("user present");
+    assert_eq!(db_email, "owner@example.test");
 
-    // Membership is owner.
     let role: String = sqlx::query_scalar!(
         r#"
         SELECT role::text AS "role!"
         FROM organization_members
         WHERE user_id = $1 AND org_id = $2
         "#,
-        outcome.owner_user_id.into_inner(),
-        outcome.organization_id.into_inner(),
+        user_id.into_inner(),
+        org_id.into_inner(),
     )
     .fetch_one(&db.pool)
     .await
-    .expect("membership row present");
+    .expect("membership row");
     assert_eq!(role, "owner");
 }
 
 #[tokio::test]
-async fn signup_is_case_insensitive_on_email() {
+async fn duplicate_email_is_rejected() {
     let db = TestDatabase::spawn().await;
-    let svc = service_for(&db);
+    let repo = AuthRepo::new(db.pool.clone());
+    let email = Email::parse("owner@example.test").expect("valid");
 
-    svc.signup_organization(valid_signup())
+    repo.create_organization_with_owner(
+        &email,
+        &stub_hash(),
+        &Slug::parse("one").expect("valid"),
+        "One",
+    )
+    .await
+    .expect("first ok");
+
+    let err = repo
+        .create_organization_with_owner(
+            &Email::parse("OWNER@Example.TEST").expect("valid"),
+            &stub_hash(),
+            &Slug::parse("two").expect("valid"),
+            "Two",
+        )
         .await
-        .expect("first ok");
-
-    let mut second = valid_signup();
-    second.email = "OWNER@Example.TEST".into();
-    second.organization_slug = "other-org".into();
-    second.organization_name = "Other Org".into();
-
-    let err = svc
-        .signup_organization(second)
-        .await
-        .expect_err("duplicate email must fail");
+        .expect_err("must fail");
     assert!(matches!(err, AuthError::EmailAlreadyTaken));
+    assert_eq!(count_users(&db.pool).await, 1);
 }
 
 #[tokio::test]
-async fn duplicate_slug_is_rejected_with_specific_error() {
+async fn duplicate_slug_is_rejected() {
     let db = TestDatabase::spawn().await;
-    let svc = service_for(&db);
+    let repo = AuthRepo::new(db.pool.clone());
 
-    svc.signup_organization(valid_signup())
+    repo.create_organization_with_owner(
+        &Email::parse("one@example.test").expect("valid"),
+        &stub_hash(),
+        &Slug::parse("acme").expect("valid"),
+        "Acme",
+    )
+    .await
+    .expect("first ok");
+
+    let err = repo
+        .create_organization_with_owner(
+            &Email::parse("two@example.test").expect("valid"),
+            &stub_hash(),
+            &Slug::parse("acme").expect("valid"),
+            "Acme Two",
+        )
         .await
-        .expect("first ok");
-
-    let mut second = valid_signup();
-    second.email = "another@example.test".into();
-
-    let err = svc
-        .signup_organization(second)
-        .await
-        .expect_err("duplicate slug must fail");
+        .expect_err("must fail");
     assert!(matches!(err, AuthError::SlugAlreadyTaken));
 }
 
 #[tokio::test]
-async fn invalid_email_does_not_touch_the_db() {
+async fn progressive_lockout_applies_after_five_failures() {
     let db = TestDatabase::spawn().await;
-    let svc = service_for(&db);
+    let repo = AuthRepo::new(db.pool.clone());
+    let email = Email::parse("bob@example.test").expect("valid");
 
-    let mut input = valid_signup();
-    input.email = "not-an-email".into();
-
-    let err = svc
-        .signup_organization(input)
+    let (_, user_id) = repo
+        .create_organization_with_owner(
+            &email,
+            &stub_hash(),
+            &Slug::parse("acme-lock").expect("valid"),
+            "Acme",
+        )
         .await
-        .expect_err("validation");
-    assert!(matches!(err, AuthError::InvalidEmail));
+        .expect("create");
 
-    let users_after = count_users(&db.pool).await;
-    assert_eq!(
-        users_after, 0,
-        "failed validation must not have written rows"
-    );
+    // First four failures — no lockout.
+    for _ in 0..4 {
+        let window = repo.record_failed_login(user_id).await.expect("inc");
+        assert!(window.is_none(), "should not lock before 5");
+    }
+
+    let locked_until = repo
+        .record_failed_login(user_id)
+        .await
+        .expect("inc")
+        .expect("fifth attempt must lock");
+    assert!(locked_until > chrono::Utc::now());
+
+    // Reset clears both counter and lockout.
+    repo.reset_failed_logins(user_id).await.expect("reset");
+    let user = repo
+        .find_user_by_email(&email)
+        .await
+        .expect("find")
+        .expect("present");
+    assert_eq!(user.failed_login_attempts, 0);
+    assert!(user.locked_until.is_none());
 }
 
 #[tokio::test]
-async fn weak_password_is_rejected() {
+async fn memberships_are_listed_for_owner() {
     let db = TestDatabase::spawn().await;
-    let svc = service_for(&db);
+    let repo = AuthRepo::new(db.pool.clone());
 
-    let mut input = valid_signup();
-    input.password = "short".into();
-
-    let err = svc
-        .signup_organization(input)
+    let (_, user_id) = repo
+        .create_organization_with_owner(
+            &Email::parse("alice@example.test").expect("valid"),
+            &stub_hash(),
+            &Slug::parse("alice-co").expect("valid"),
+            "Alice & Co",
+        )
         .await
-        .expect_err("validation");
-    assert!(matches!(err, AuthError::WeakPassword));
+        .expect("create");
+
+    let memberships = repo.list_memberships(user_id).await.expect("list");
+    assert_eq!(memberships.len(), 1);
+    assert_eq!(memberships[0].org_slug, "alice-co");
+    assert_eq!(memberships[0].role, api::auth::Role::Owner);
+
+    assert!(!repo.is_platform_admin(user_id).await.expect("check"));
 }
 
 #[tokio::test]
 async fn audit_events_cannot_be_updated_or_deleted() {
-    // The table is empty at this point, but the triggers still fire when a
-    // row is inserted. We exercise them directly to catch accidental trigger
-    // removal in a future migration.
     let db = TestDatabase::spawn().await;
 
     sqlx::query!(
