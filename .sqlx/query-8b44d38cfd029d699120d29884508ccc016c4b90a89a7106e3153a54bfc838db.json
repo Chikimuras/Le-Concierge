@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT o.id AS org_id,\n                   om.role AS \"role: Role\"\n              FROM organizations o\n              JOIN organization_members om\n                ON om.org_id = o.id\n               AND om.user_id = $1\n             WHERE o.slug = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "org_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "role: Role",
+        "type_info": {
+          "Custom": {
+            "name": "role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "manager",
+                "cleaner",
+                "guest"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8b44d38cfd029d699120d29884508ccc016c4b90a89a7106e3153a54bfc838db"
+}

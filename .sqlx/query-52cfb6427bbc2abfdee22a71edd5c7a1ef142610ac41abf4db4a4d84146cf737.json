@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE properties\n               SET deleted_at = now()\n             WHERE id = $1\n               AND org_id = $2\n               AND deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "52cfb6427bbc2abfdee22a71edd5c7a1ef142610ac41abf4db4a4d84146cf737"
+}

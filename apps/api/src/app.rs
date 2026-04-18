@@ -28,7 +28,9 @@ use tower_governor::{
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::{auth, health, middleware as mw, openapi::ApiDoc, session::csrf, state::AppState};
+use crate::{
+    auth, health, middleware as mw, openapi::ApiDoc, properties, session::csrf, state::AppState,
+};
 
 /// Build the fully composed application router.
 pub fn build_app(state: AppState) -> Router {
@@ -81,6 +83,7 @@ pub fn build_app(state: AppState) -> Router {
         .merge(auth::totp::routes::router().layer(GovernorLayer {
             config: totp_rl_config,
         }))
+        .merge(properties::routes::router())
         .split_for_parts();
 
     let docs_router = crate::openapi::docs_router(openapi);

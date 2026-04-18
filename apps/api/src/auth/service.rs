@@ -278,6 +278,17 @@ impl AuthService {
         crate::auth::hash::verify_password(password, &self.pepper, &row.password_hash)
     }
 
+    /// Resolve a tenant-scoped caller's access in one round-trip. See
+    /// ADR 0008 — returns `None` for unknown slug, missing membership,
+    /// or any inactive membership. The HTTP layer maps `None` to 404.
+    pub async fn resolve_membership(
+        &self,
+        user_id: UserId,
+        slug: &str,
+    ) -> Result<Option<crate::auth::repo::ActiveMembership>, AuthError> {
+        self.repo.find_active_membership(user_id, slug).await
+    }
+
     /// Hydrate the membership list and platform-admin flag for a user.
     /// Used by `/auth/me`, `/auth/login`, and `/auth/signup` response
     /// bodies so the frontend can bootstrap its role-gated UI in one
