@@ -2,7 +2,11 @@
 //!
 //! Config is composed from, in order (later overrides earlier):
 //!
-//! 1. `config/default.toml` — baseline values checked into the repo.
+//! 1. The baseline `config/default.toml` checked into the repo, **embedded
+//!    into the binary at compile time** via `include_str!`. This means the
+//!    api boots identically whether it is launched from the workspace root
+//!    (`cargo run -p api`), from the crate dir, from `/app/api` inside
+//!    the Docker image, or via `systemd` — no CWD assumption.
 //! 2. A file pointed to by the `APP_CONFIG_FILE` env var, if set.
 //! 3. Environment variables prefixed with `APP_`, using `__` as the nesting
 //!    separator (e.g. `APP_HTTP__BIND=0.0.0.0:3000`).
@@ -18,6 +22,10 @@ use figment::{
     providers::{Env, Format, Toml},
 };
 use serde::Deserialize;
+
+/// Baseline configuration baked into the binary. Path is relative to this
+/// source file; `include_str!` is evaluated by rustc at compile time.
+const DEFAULT_CONFIG_TOML: &str = include_str!("../config/default.toml");
 
 /// Root configuration tree. Every field is required; defaults are supplied by
 /// `config/default.toml`.
@@ -96,7 +104,7 @@ impl Config {
         // from Docker secrets / systemd / etc.; the absence of `.env` is fine.
         let _ = dotenvy::dotenv();
 
-        let mut figment = Figment::new().merge(Toml::file("config/default.toml"));
+        let mut figment = Figment::new().merge(Toml::string(DEFAULT_CONFIG_TOML));
 
         if let Ok(overlay) = std::env::var("APP_CONFIG_FILE") {
             let overlay: PathBuf = overlay.into();

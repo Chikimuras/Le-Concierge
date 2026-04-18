@@ -1,7 +1,7 @@
 # Task runner for Le Concierge. Invoke with `just <recipe>`.
 #
-# Recipes that do not exist yet (web-*, compose-*) will be added in phases
-# 2 and 3. Update this file in lockstep with the CI workflow (phase 4).
+# Recipes that do not exist yet (compose-*) will be added in phase 3.
+# Update this file in lockstep with the CI workflow (phase 4).
 #
 # Ref: https://just.systems
 
@@ -27,19 +27,20 @@ hooks-uninstall:
 # Format every language in the repo. Safe to run before committing.
 fmt:
     cargo fmt --all
-    @echo "[fmt] Web (prettier) will run once apps/web lands."
+    bun run --filter './apps/web' format
 
 # Run every linter in the repo. Fails on any warning (CI parity).
 lint:
     cargo clippy --all-targets --locked -- -D warnings
-    @echo "[lint] bun lint (added in Phase 2)"
+    bun run --filter './apps/web' lint
+    bun run --filter './apps/web' typecheck
 
 # --- Tests -------------------------------------------------------------------
 
 # Run the full test suite (unit + integration + front). Slow.
 test:
     cargo test --locked --workspace
-    @echo "[test] bun test (added in Phase 2)"
+    bun run --filter './apps/web' test
 
 # --- Security ---------------------------------------------------------------
 
@@ -79,6 +80,37 @@ api-docker-run: api-docker-build
     docker run --rm -it --name le-concierge-api -p 3000:3000 \
         --env-file apps/api/.env.example \
         le-concierge/api:dev
+
+# --- Web (apps/web) ---------------------------------------------------------
+
+# Install JS deps for all bun workspaces. Run after cloning.
+web-install:
+    bun install
+
+# Vite dev server on :5173. Proxies /api → :3000, so run `just api-run` in
+# parallel.
+web-dev:
+    bun run --filter './apps/web' dev
+
+# Type-check + production build.
+web-build:
+    bun run --filter './apps/web' build
+
+# Vitest run (no watch).
+web-test:
+    bun run --filter './apps/web' test
+
+# ESLint + vue-tsc type check.
+web-lint:
+    bun run --filter './apps/web' lint
+    bun run --filter './apps/web' typecheck
+
+# Start both api and web in parallel. Requires GNU parallel or similar; kept
+# here as documentation until a proper `just` recipe for process groups lands.
+dev:
+    @echo "Run in two terminals:"
+    @echo "  1) just api-run"
+    @echo "  2) just web-dev"
 
 # --- CI shortcut -------------------------------------------------------------
 
