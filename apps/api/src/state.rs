@@ -22,6 +22,7 @@ use crate::{
         totp::{TotpEncryptionKey, TotpRepo, TotpService},
     },
     config::Config,
+    properties::{PropertyRepo, PropertyService},
     session::{RedisSessionStore, SessionService, cookie::CookieConfig},
 };
 
@@ -33,6 +34,7 @@ pub struct AppState {
     pub session: SessionService,
     pub auth: AuthService,
     pub totp: TotpService,
+    pub properties: PropertyService,
 }
 
 impl AppState {
@@ -75,10 +77,12 @@ impl AppState {
             .map_err(|e| anyhow::anyhow!("totp key init failed: {e}"))?;
         let totp = TotpService::new(
             TotpRepo::new(pool.clone()),
-            audit_repo,
+            audit_repo.clone(),
             config.auth.pepper.clone(),
             totp_key,
         );
+
+        let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo);
 
         Ok(Self {
             config: Arc::new(config),
@@ -86,6 +90,7 @@ impl AppState {
             session,
             auth,
             totp,
+            properties,
         })
     }
 
@@ -117,10 +122,12 @@ impl AppState {
             .map_err(|e| anyhow::anyhow!("totp key init failed: {e}"))?;
         let totp = TotpService::new(
             TotpRepo::new(pool.clone()),
-            audit_repo,
+            audit_repo.clone(),
             config.auth.pepper.clone(),
             totp_key,
         );
+
+        let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo);
 
         Ok(Self {
             config: Arc::new(config),
@@ -128,6 +135,7 @@ impl AppState {
             session,
             auth,
             totp,
+            properties,
         })
     }
 

@@ -12,9 +12,11 @@ pub mod error;
 pub mod health;
 pub mod middleware;
 pub mod openapi;
+pub mod properties;
 pub mod session;
 pub mod state;
 pub mod telemetry;
+pub mod tenancy;
 
 pub use app::build_app;
 pub use config::Config;

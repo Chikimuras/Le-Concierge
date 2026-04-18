@@ -34,6 +34,16 @@ pub struct UserIdRow {
     pub password_hash: PasswordHash,
 }
 
+/// Resolved tenant access returned by
+/// [`AuthRepo::find_active_membership`]. Carries the org id (never the
+/// slug — handlers pass this id through to every SQL query) and the
+/// user's role inside that org.
+#[derive(Debug, Clone, Copy)]
+pub struct ActiveMembership {
+    pub org_id: OrgId,
+    pub role: Role,
+}
+
 /// Row describing a user's role inside an organization. Returned by
 /// [`AuthRepo::list_memberships`].
 #[derive(Debug, Clone)]
@@ -259,6 +269,41 @@ impl AuthRepo {
         Ok(row.map(|r| UserIdRow {
             email: r.email,
             password_hash: PasswordHash::new_unchecked(r.password_hash),
+        }))
+    }
+
+    /// Resolve `(org, user's role)` for a tenant-scoped request in one
+    /// round-trip. Returns `None` for any of:
+    ///
+    /// - No organization with that slug.
+    /// - Org exists but the user has no membership in it.
+    ///
+    /// Collapsing both misses into `None` is deliberate (ADR 0008): the
+    /// caller renders **404 Not Found** in either case, so the client
+    /// cannot enumerate which organisations exist.
+    pub async fn find_active_membership(
+        &self,
+        user_id: UserId,
+        slug: &str,
+    ) -> Result<Option<ActiveMembership>, AuthError> {
+        let row = sqlx::query!(
+            r#"
+            SELECT o.id AS org_id,
+                   om.role AS "role: Role"
+              FROM organizations o
+              JOIN organization_members om
+                ON om.org_id = o.id
+               AND om.user_id = $1
+             WHERE o.slug = $2
+            "#,
+            user_id.into_inner(),
+            slug,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|r| ActiveMembership {
+            org_id: OrgId::from(r.org_id),
+            role: r.role,
         }))
     }
 
