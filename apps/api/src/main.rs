@@ -10,6 +10,8 @@
 //!
 //! `anyhow` is used here — and only here — per `CLAUDE.md` §2.1.
 
+use std::net::SocketAddr;
+
 use anyhow::Context;
 use tokio::signal;
 
@@ -30,7 +32,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let bind = config.http.bind;
-    let state = api::AppState::new(config).context("initializing application state")?;
+    let state = api::AppState::new(config)
+        .await
+        .context("initializing application state")?;
     let app = api::build_app(state);
 
     let listener = tokio::net::TcpListener::bind(bind)
@@ -39,10 +43,16 @@ async fn main() -> anyhow::Result<()> {
     let local_addr = listener.local_addr().context("reading listener addr")?;
     tracing::info!(%local_addr, "listening");
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .context("serving")?;
+    // `into_make_service_with_connect_info` makes `ConnectInfo<SocketAddr>`
+    // available as an extractor — needed by the auth handlers to audit
+    // the caller's IP address.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .context("serving")?;
 
     tracing::info!("bye");
     Ok(())

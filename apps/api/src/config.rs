@@ -38,6 +38,8 @@ pub struct Config {
     pub telemetry: TelemetryConfig,
     pub cors: CorsConfig,
     pub auth: AuthConfig,
+    pub session: SessionConfig,
+    pub redis: RedisConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -106,6 +108,36 @@ pub struct AuthConfig {
     pub pepper: SecretString,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SessionConfig {
+    /// Idle timeout. The session is kept alive while the user keeps
+    /// hitting the API; after this many seconds of inactivity, the
+    /// Redis key expires and the cookie becomes useless.
+    pub idle_ttl_secs: u64,
+    /// Absolute cut-off. Regardless of activity, a session older than
+    /// this is refused.
+    pub absolute_ttl_secs: u64,
+    /// Whether the `Secure` cookie attribute is set. Must be `true` in
+    /// production; `false` is only safe over a trusted loopback or in
+    /// dev.
+    pub cookie_secure: bool,
+    /// Optional `Domain` attribute. Leaving unset pins the cookie to
+    /// the origin host, which is usually what you want for first-party
+    /// apps.
+    #[serde(default)]
+    pub cookie_domain: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RedisConfig {
+    /// `redis://user:pass@host:port/db` URL. Treated as a secret — never
+    /// logged — though it is less critical than the pepper since the
+    /// Redis instance is loopback-only in dev and VPC-only in prod.
+    pub url: String,
+}
+
 impl Config {
     /// Load configuration from the layered sources documented at module level.
     ///
@@ -162,6 +194,17 @@ impl Config {
             "auth": {
                 "pepper_configured": true,
             },
+            "session": {
+                "idle_ttl_secs": self.session.idle_ttl_secs,
+                "absolute_ttl_secs": self.session.absolute_ttl_secs,
+                "cookie_secure": self.session.cookie_secure,
+                "cookie_domain_set": self.session.cookie_domain.is_some(),
+            },
+            // `redis.url` may contain the auth password — summary shows
+            // only whether it is configured.
+            "redis": {
+                "configured": !self.redis.url.is_empty(),
+            },
         })
     }
 }
@@ -196,6 +239,15 @@ mod tests {
             auth: AuthConfig {
                 pepper: SecretString::from("dangerous-test-pepper-never-use-in-prod"),
             },
+            session: SessionConfig {
+                idle_ttl_secs: 3600,
+                absolute_ttl_secs: 86400,
+                cookie_secure: true,
+                cookie_domain: None,
+            },
+            redis: RedisConfig {
+                url: "redis://redis.example:6379/".into(),
+            },
         };
 
         let summary = config.log_summary().to_string();
@@ -210,6 +262,10 @@ mod tests {
         assert!(
             !summary.contains("dangerous-test-pepper"),
             "auth pepper must never appear in log summaries"
+        );
+        assert!(
+            !summary.contains("redis.example"),
+            "redis URL must never appear in log summaries"
         );
     }
 }

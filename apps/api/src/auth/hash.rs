@@ -92,6 +92,28 @@ pub fn verify_password(
     }
 }
 
+/// Produce a valid Argon2id PHC hash bound to `pepper` for use as a
+/// timing-equalization target in the login flow (OWASP ASVS 2.1.1).
+///
+/// Computed once at boot, this hash cannot match any password an attacker
+/// can choose: the plaintext is derived from a per-boot `OsRng` salt and
+/// never surfaces. Verifying an arbitrary password against it performs
+/// the full Argon2id work, letting us make the "unknown email" and
+/// "account locked" branches of login indistinguishable by latency from
+/// the "wrong password" branch.
+pub fn precompute_dummy_hash(pepper: &SecretString) -> Result<PasswordHash, AuthError> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon = hasher(pepper)?;
+    // The salt bytes double as the throwaway plaintext: `OsRng`-sourced
+    // entropy that no attacker can reproduce to make `verify_password`
+    // return `Ok(true)`.
+    let phc = argon
+        .hash_password(salt.as_str().as_bytes(), &salt)
+        .map_err(AuthError::Hashing)?
+        .to_string();
+    Ok(PasswordHash::new_unchecked(phc))
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -137,5 +159,15 @@ mod tests {
         let bogus = PasswordHash::new_unchecked("not a phc string".into());
         let err = verify_password("whatever", &pepper(), &bogus).unwrap_err();
         assert!(matches!(err, AuthError::Hashing(_)));
+    }
+
+    #[test]
+    fn dummy_hash_is_valid_and_never_matches_foreign_input() {
+        let dummy = precompute_dummy_hash(&pepper()).expect("dummy ok");
+        // Real PHC string: parses successfully.
+        argon2::password_hash::PasswordHash::new(dummy.as_db_str()).expect("parse phc");
+        // Cannot be matched by any caller-supplied password — the full
+        // Argon2id work runs, then returns Ok(false).
+        assert!(!verify_password("whatever", &pepper(), &dummy).expect("verify"));
     }
 }

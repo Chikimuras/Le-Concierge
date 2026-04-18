@@ -62,6 +62,13 @@ pub enum AuthError {
     /// Any SQLx error. Inner detail logged; client sees 500.
     #[error(transparent)]
     Repository(#[from] sqlx::Error),
+
+    /// Catch-all for unexpected failures bubbling up from an adjacent
+    /// module (session store, external HTTP call, …). Always a 500.
+    /// Carries an `anyhow::Error` so the source chain is preserved in
+    /// logs without coupling this enum to every possible source type.
+    #[error(transparent)]
+    Internal(anyhow::Error),
 }
 
 impl From<AuthError> for AppError {
@@ -92,6 +99,7 @@ impl From<AuthError> for AppError {
                 AppError::Internal(anyhow::anyhow!("hashing misconfigured: {detail}"))
             }
             AuthError::Repository(source) => AppError::Internal(source.into()),
+            AuthError::Internal(source) => AppError::Internal(source),
         }
     }
 }

@@ -40,7 +40,8 @@ use crate::state::AppState;
         license(name = "Proprietary")
     ),
     tags(
-        (name = "health", description = "Liveness and readiness probes.")
+        (name = "health", description = "Liveness and readiness probes."),
+        (name = "auth", description = "Signup, login, logout, and session introspection.")
     )
 )]
 pub struct ApiDoc;
