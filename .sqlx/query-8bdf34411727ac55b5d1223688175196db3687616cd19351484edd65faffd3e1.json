@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO audit_events (kind, payload, hash)\n        VALUES ('test.event', '{}'::jsonb, decode(repeat('ab', 32), 'hex'))\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "8bdf34411727ac55b5d1223688175196db3687616cd19351484edd65faffd3e1"
+}

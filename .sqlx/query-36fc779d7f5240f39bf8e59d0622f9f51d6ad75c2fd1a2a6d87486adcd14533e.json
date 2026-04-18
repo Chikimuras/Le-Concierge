@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE audit_events SET kind = 'tampered'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "36fc779d7f5240f39bf8e59d0622f9f51d6ad75c2fd1a2a6d87486adcd14533e"
+}

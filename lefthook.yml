@@ -16,18 +16,25 @@ pre-commit:
   parallel: true
   commands:
     # --- Secrets -----------------------------------------------------------
+    # Skipped automatically if `gitleaks` is not installed — prevents the
+    # hook from failing for devs who haven't set it up yet. CI always has
+    # it, so leaks still get caught before merge.
     gitleaks:
       tags: [security]
       run: gitleaks protect --staged --redact --config .gitleaks.toml
+      skip:
+        - run: ! command -v gitleaks >/dev/null 2>&1
       fail_text: "Potential secret found. Remove it before committing."
 
     # --- Generic --------------------------------------------------------
+    # POSIX-portable regex (`[[:space:]]+$`) so this hook runs on macOS
+    # (BSD grep, no `-P`) and Linux (GNU grep) without changes.
     trailing-whitespace:
       tags: [style]
       glob: "*.{rs,ts,tsx,vue,js,jsx,json,yml,yaml,md,toml,sh,sql,hurl}"
       run: |
-        if grep -nP ' +$' {staged_files}; then
-          echo "Trailing whitespace found. Run 'sed -i \"s/[[:space:]]*\\$//\" <file>' or fix manually."
+        if grep -nE '[[:space:]]+$' {staged_files}; then
+          echo "Trailing whitespace found. Run 'cargo fmt' / prettier --write or fix manually."
           exit 1
         fi
 

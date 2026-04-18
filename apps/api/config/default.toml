@@ -31,3 +31,8 @@ service_name = "api"
 # Empty = CORS off. Populate in each environment (dev adds the Vite URL,
 # prod adds the real domain(s)).
 allowed_origins = []
+
+# The `[auth]` section is intentionally omitted from the TOML baseline:
+# `auth.pepper` is a secret (CLAUDE.md §3.1 / ADR 0005) and must be supplied
+# via `APP_AUTH__PEPPER` env var (or Docker secret in prod). A missing
+# pepper makes `Config::load()` fail closed, which is the desired default.

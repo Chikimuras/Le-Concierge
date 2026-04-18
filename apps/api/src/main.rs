@@ -59,9 +59,7 @@ async fn main() -> anyhow::Result<()> {
 #[allow(clippy::expect_used)]
 async fn shutdown_signal() {
     let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("install Ctrl+C handler");
+        signal::ctrl_c().await.expect("install Ctrl+C handler");
     };
 
     #[cfg(unix)]

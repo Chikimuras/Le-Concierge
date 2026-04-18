@@ -84,6 +84,13 @@ utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.2"
 utoipa-scalar = { version = "0.3", features = ["axum"] }
 
+# --- auth --------------------------------------------------------------------
+# Argon2id (OWASP-recommended password hashing), pepper stored as `SecretString`
+# to avoid accidental leaks via Debug / logs, RFC-compliant email validation.
+argon2 = { version = "0.5", features = ["std"] }
+secrecy = { version = "0.10", features = ["serde"] }
+email_address = "0.2"
+
 # --- misc --------------------------------------------------------------------
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
@@ -92,3 +99,8 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 # End-to-end integration tests spawn the real app and hit it over HTTP.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 tokio = { version = "1.41", features = ["full", "test-util"] }
+
+# Ephemeral Postgres containers for DB-backed integration tests. CLAUDE.md
+# §4.2 forbids mocking the DB.
+testcontainers = "0.23"
+testcontainers-modules = { version = "0.11", features = ["postgres"] }

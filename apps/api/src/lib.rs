@@ -5,6 +5,7 @@
 //! [`app::build_app`] from tests rather than running `main.rs` directly.
 
 pub mod app;
+pub mod auth;
 pub mod config;
 pub mod error;
 pub mod health;

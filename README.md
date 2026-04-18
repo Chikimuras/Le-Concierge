@@ -84,6 +84,20 @@ To nuke volumes (⚠️ destroys DB data):
 just compose-reset
 ```
 
+### Apply database migrations (Phase 4a)
+
+```bash
+cargo install sqlx-cli --no-default-features --features postgres,rustls
+echo "APP_AUTH__PEPPER=$(openssl rand -hex 32)" >> apps/api/.env   # one-off
+export DATABASE_URL=$(grep APP_DATABASE__URL apps/api/.env | cut -d= -f2-)
+just db-migrate              # applies apps/api/migrations/*.sql
+just db-migrate-info         # confirms the expected set is recorded
+```
+
+The pepper is required — the API will refuse to start without one. Never
+commit `apps/api/.env`; it is gitignored. In prod, the pepper comes from
+Docker secrets or SOPS+age (ADR 0002).
+
 ### Run the API (Phase 1)
 
 ```bash

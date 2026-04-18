@@ -117,6 +117,30 @@ db-psql:
         -U ${POSTGRES_USER:-le_concierge} \
         -d ${POSTGRES_DB:-le_concierge_dev}
 
+# --- Database migrations (sqlx-cli) ----------------------------------------
+# Requires `cargo install sqlx-cli --no-default-features --features postgres,rustls`
+# and DATABASE_URL set (typically from apps/api/.env).
+
+# Apply every pending migration under apps/api/migrations/.
+db-migrate:
+    sqlx migrate run --source apps/api/migrations
+
+# Revert the last migration. Forward-only is the rule (CLAUDE.md §10),
+# so this recipe is here only for emergencies on a dev DB you don't mind
+# nuking. Never run against production.
+db-migrate-revert:
+    sqlx migrate revert --source apps/api/migrations
+
+# List applied and pending migrations.
+db-migrate-info:
+    sqlx migrate info --source apps/api/migrations
+
+# Regenerate the sqlx offline query cache (.sqlx/). Run this after
+# editing any `sqlx::query!` / `query_as!` invocation so CI (and fresh
+# clones) can build without a live database.
+db-sqlx-prepare:
+    cargo sqlx prepare --workspace -- --all-targets
+
 # Interactive `redis-cli` shell on the running redis container.
 redis-cli:
     {{COMPOSE}} exec redis redis-cli

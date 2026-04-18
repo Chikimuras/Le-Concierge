@@ -15,7 +15,7 @@ members = [
 # Shared settings inherited by member crates via `package.workspace = true`.
 [workspace.package]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.90"
 license = "LicenseRef-Proprietary"
 authors = ["Le Concierge <dev@leconcierge.local>"]
 repository = "https://github.com/v0idware/le-concierge"

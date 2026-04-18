@@ -7,10 +7,13 @@
 
 #![allow(dead_code, clippy::unwrap_used, clippy::expect_used)] // test harness
 
+pub mod db;
+
 use api::{
     AppState, Config, build_app,
-    config::{CorsConfig, DatabaseConfig, HttpConfig, LogFormat, TelemetryConfig},
+    config::{AuthConfig, CorsConfig, DatabaseConfig, HttpConfig, LogFormat, TelemetryConfig},
 };
+use secrecy::SecretString;
 
 pub struct TestApp {
     pub base_url: String,
@@ -45,6 +48,9 @@ fn test_config() -> Config {
         },
         cors: CorsConfig {
             allowed_origins: vec![],
+        },
+        auth: AuthConfig {
+            pepper: SecretString::from("dangerous-test-pepper-never-use-in-prod"),
         },
     }
 }

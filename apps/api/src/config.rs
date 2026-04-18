@@ -21,6 +21,7 @@ use figment::{
     Figment,
     providers::{Env, Format, Toml},
 };
+use secrecy::SecretString;
 use serde::Deserialize;
 
 /// Baseline configuration baked into the binary. Path is relative to this
@@ -36,6 +37,7 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub telemetry: TelemetryConfig,
     pub cors: CorsConfig,
+    pub auth: AuthConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -92,6 +94,18 @@ pub struct CorsConfig {
     pub allowed_origins: Vec<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthConfig {
+    /// Application-wide pepper injected into every Argon2id password hash.
+    /// Treated as a secret: never ships in TOML, only via env or Docker
+    /// secret (CLAUDE.md §3.1 / ADR 0005). Minimum 32 random bytes
+    /// recommended; generate one with `openssl rand -hex 32`.
+    ///
+    /// `SecretString` redacts itself in `Debug` and zeroes on drop.
+    pub pepper: SecretString,
+}
+
 impl Config {
     /// Load configuration from the layered sources documented at module level.
     ///
@@ -143,6 +157,11 @@ impl Config {
             "cors": {
                 "allowed_origins_count": self.cors.allowed_origins.len(),
             },
+            // `auth.pepper` is intentionally omitted — it is a secret
+            // (CLAUDE.md §3.3).
+            "auth": {
+                "pepper_configured": true,
+            },
         })
     }
 }
@@ -174,6 +193,9 @@ mod tests {
             cors: CorsConfig {
                 allowed_origins: vec!["https://example.test".into()],
             },
+            auth: AuthConfig {
+                pepper: SecretString::from("dangerous-test-pepper-never-use-in-prod"),
+            },
         };
 
         let summary = config.log_summary().to_string();
@@ -184,6 +206,10 @@ mod tests {
         assert!(
             !summary.contains("example.test"),
             "CORS origins must not be individually logged"
+        );
+        assert!(
+            !summary.contains("dangerous-test-pepper"),
+            "auth pepper must never appear in log summaries"
         );
     }
 }

@@ -3,6 +3,9 @@
 #
 # Ref: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
 [toolchain]
-channel = "1.85"
+# Bumped from 1.85 (initial pin, edition-2024 minimum) to 1.90: transitive
+# deps of sqlx-cli and several other core crates now require 1.86+, and
+# April 2026 stable is well past 1.90. Any code still uses edition 2024.
+channel = "1.90"
 components = ["rustfmt", "clippy"]
 profile = "default"

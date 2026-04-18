@@ -188,8 +188,14 @@ mod tests {
             AppError::Conflict("déjà pris".into()).status(),
             StatusCode::CONFLICT
         );
-        assert_eq!(AppError::RateLimited.status(), StatusCode::TOO_MANY_REQUESTS);
-        assert_eq!(AppError::Unavailable.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            AppError::RateLimited.status(),
+            StatusCode::TOO_MANY_REQUESTS
+        );
+        assert_eq!(
+            AppError::Unavailable.status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
         assert_eq!(
             AppError::Internal(anyhow::anyhow!("boom")).status(),
             StatusCode::INTERNAL_SERVER_ERROR

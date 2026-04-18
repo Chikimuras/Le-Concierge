@@ -19,7 +19,7 @@
 # Prebuilt image that already ships `cargo-chef` — avoids installing it from
 # crates.io at every cold build (was a reliability issue).
 # Ref: https://github.com/LukeMathWalker/cargo-chef
-FROM lukemathwalker/cargo-chef:latest-rust-1.85-slim-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.90-slim-bookworm AS chef
 WORKDIR /build
 
 FROM chef AS planner

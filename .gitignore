@@ -41,6 +41,8 @@ stats.html
 !.vscode/extensions.json
 !.vscode/settings.json.example
 .fleet/
+# VSCode "Local History" extension snapshots — purely local, redundant with git.
+.history/
 *.swp
 *.swo
 *~

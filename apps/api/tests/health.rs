@@ -44,7 +44,10 @@ async fn healthz_emits_security_response_headers() {
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
     assert!(hsts.contains("max-age=63072000"), "HSTS missing max-age");
-    assert!(hsts.contains("includeSubDomains"), "HSTS missing subdomains");
+    assert!(
+        hsts.contains("includeSubDomains"),
+        "HSTS missing subdomains"
+    );
     assert!(hsts.contains("preload"), "HSTS missing preload");
 
     assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
@@ -62,8 +65,15 @@ async fn healthz_emits_security_response_headers() {
         "CSP missing on JSON response",
     );
     // JSON response should be locked down.
-    let csp = headers.get("content-security-policy").unwrap().to_str().unwrap();
-    assert!(csp.contains("default-src 'none'"), "CSP too permissive: {csp}");
+    let csp = headers
+        .get("content-security-policy")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(
+        csp.contains("default-src 'none'"),
+        "CSP too permissive: {csp}"
+    );
 }
 
 #[tokio::test]
