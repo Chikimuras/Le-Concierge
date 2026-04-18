@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Ref, ref } from 'vue'
 import { createI18n } from 'vue-i18n'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -37,7 +38,12 @@ function setHealthMock(next: HealthMock): void {
 function mountHomeView() {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: HomeView }],
+    routes: [
+      { path: '/', component: HomeView },
+      { path: '/login', name: 'login', component: HomeView },
+      { path: '/signup', name: 'signup', component: HomeView },
+      { path: '/dashboard', name: 'dashboard', component: HomeView },
+    ],
   })
   const i18n = createI18n({
     legacy: false,
@@ -45,10 +51,14 @@ function mountHomeView() {
     fallbackLocale: 'fr',
     messages: { fr, en },
   })
-  return mount(HomeView, { global: { plugins: [router, i18n] } })
+  return mount(HomeView, { global: { plugins: [createPinia(), router, i18n] } })
 }
 
 describe('HomeView', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('shows the loading state while health is pending', () => {
     setHealthMock({
       isPending: ref(true),
@@ -97,11 +107,26 @@ describe('HomeView', () => {
     })
 
     const wrapper = mountHomeView()
-    const buttons = wrapper.findAll('button')
+    // Scope the assertion to the theme toggle group; the page also
+    // renders auth-related buttons that we count separately below.
+    const themeButtons = wrapper.find('[aria-label="Basculer le thème"]').findAll('button')
 
-    expect(buttons).toHaveLength(3)
-    expect(buttons[0]?.text()).toBe(fr.theme.system)
-    expect(buttons[1]?.text()).toBe(fr.theme.light)
-    expect(buttons[2]?.text()).toBe(fr.theme.dark)
+    expect(themeButtons).toHaveLength(3)
+    expect(themeButtons[0]?.text()).toBe(fr.theme.system)
+    expect(themeButtons[1]?.text()).toBe(fr.theme.light)
+    expect(themeButtons[2]?.text()).toBe(fr.theme.dark)
+  })
+
+  it('shows login + signup CTAs when anonymous', () => {
+    setHealthMock({
+      isPending: ref(false),
+      isError: ref(false),
+      data: ref({ status: 'ok', version: '0.1.0', service: 'api' }),
+    })
+
+    const wrapper = mountHomeView()
+    expect(wrapper.text()).toContain(fr.auth.login.cta)
+    expect(wrapper.text()).toContain(fr.auth.signup.cta)
+    expect(wrapper.text()).not.toContain(fr.pages.home.go_to_dashboard)
   })
 })

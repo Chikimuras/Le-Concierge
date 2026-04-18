@@ -11,7 +11,21 @@
       "api_status_ok": "Opérationnelle",
       "api_status_error": "Indisponible",
       "api_service": "Service",
-      "api_version": "Version"
+      "api_version": "Version",
+      "go_to_dashboard": "Aller au tableau de bord"
+    },
+    "login": {
+      "title": "Connexion"
+    },
+    "signup": {
+      "title": "Inscription"
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "organizations": "Organisations",
+      "no_orgs": "Aucune organisation pour le moment.",
+      "platform_admin": "Administration plateforme",
+      "platform_admin_body": "Vous avez accès aux opérations transverses."
     }
   },
   "theme": {
@@ -19,5 +33,57 @@
     "system": "Système",
     "light": "Clair",
     "dark": "Sombre"
+  },
+  "auth": {
+    "fields": {
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "org_name": "Nom de l'organisation",
+      "org_slug": "Identifiant de l'organisation",
+      "org_slug_hint": "Lettres minuscules, chiffres et tirets, 2 à 64 caractères."
+    },
+    "validation": {
+      "email_required": "Saisissez votre e-mail.",
+      "email_invalid": "E-mail invalide.",
+      "password_required": "Saisissez votre mot de passe.",
+      "password_min": "Au moins {min} caractères.",
+      "org_name_required": "Saisissez le nom de l'organisation.",
+      "org_name_too_long": "Maximum {max} caractères.",
+      "slug_invalid": "Identifiant invalide (minuscules, chiffres, tirets)."
+    },
+    "login": {
+      "title": "Se connecter",
+      "subtitle": "Accédez à votre espace conciergerie.",
+      "submit": "Se connecter",
+      "cta": "Se connecter",
+      "no_account": "Pas encore de compte ?",
+      "errors": {
+        "unauthorized": "Identifiants invalides ou compte verrouillé.",
+        "rate_limited": "Trop de tentatives. Réessayez dans quelques minutes.",
+        "generic": "Connexion impossible. Réessayez dans un instant."
+      }
+    },
+    "signup": {
+      "title": "Créer un compte",
+      "subtitle": "Lancez votre conciergerie en quelques secondes.",
+      "submit": "Créer le compte",
+      "cta": "Créer un compte",
+      "has_account": "Déjà inscrit ?",
+      "errors": {
+        "generic": "Impossible de créer le compte. Vérifiez les informations saisies.",
+        "conflict": "Cet email ou cet identifiant d'organisation est déjà pris.",
+        "rate_limited": "Trop de tentatives. Réessayez dans quelques minutes."
+      }
+    },
+    "logout": {
+      "submit": "Se déconnecter"
+    },
+    "roles": {
+      "owner": "Propriétaire",
+      "manager": "Gérant",
+      "cleaner": "Ménage",
+      "guest": "Voyageur",
+      "admin": "Administrateur"
+    }
   }
 }
