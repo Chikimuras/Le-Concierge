@@ -119,28 +119,33 @@ db-psql:
         -d ${POSTGRES_DB:-le_concierge_dev}
 
 # --- Database migrations (sqlx-cli) ----------------------------------------
-# Requires `cargo install sqlx-cli --no-default-features --features postgres,rustls`
-# and DATABASE_URL set (typically from apps/api/.env).
+# Requires `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
+#
+# `sqlx-cli` needs `DATABASE_URL`. These recipes read it from the shell
+# env first (CI / ops set it explicitly), else fall back to the
+# `APP_DATABASE__URL` entry in `apps/api/.env` so local dev "just works"
+# without the `export DATABASE_URL=...` dance.
+_db_url := '${DATABASE_URL:-$(grep ^APP_DATABASE__URL= apps/api/.env | cut -d= -f2-)}'
 
 # Apply every pending migration under apps/api/migrations/.
 db-migrate:
-    sqlx migrate run --source apps/api/migrations
+    DATABASE_URL="{{_db_url}}" sqlx migrate run --source apps/api/migrations
 
 # Revert the last migration. Forward-only is the rule (CLAUDE.md §10),
 # so this recipe is here only for emergencies on a dev DB you don't mind
 # nuking. Never run against production.
 db-migrate-revert:
-    sqlx migrate revert --source apps/api/migrations
+    DATABASE_URL="{{_db_url}}" sqlx migrate revert --source apps/api/migrations
 
 # List applied and pending migrations.
 db-migrate-info:
-    sqlx migrate info --source apps/api/migrations
+    DATABASE_URL="{{_db_url}}" sqlx migrate info --source apps/api/migrations
 
 # Regenerate the sqlx offline query cache (.sqlx/). Run this after
 # editing any `sqlx::query!` / `query_as!` invocation so CI (and fresh
 # clones) can build without a live database.
 db-sqlx-prepare:
-    cargo sqlx prepare --workspace -- --all-targets
+    DATABASE_URL="{{_db_url}}" cargo sqlx prepare --workspace -- --all-targets
 
 # Interactive `redis-cli` shell on the running redis container.
 redis-cli:
