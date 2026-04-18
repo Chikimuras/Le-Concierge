@@ -34,6 +34,11 @@
       "setup_title": "Activer l'authentification à deux facteurs",
       "challenge_title": "Code de vérification",
       "recovery_title": "Codes de récupération"
+    },
+    "properties": {
+      "list_title": "Biens",
+      "new_title": "Nouveau bien",
+      "detail_title": "Détail du bien"
     }
   },
   "theme": {
@@ -139,6 +144,63 @@
         "rate_limited": "Trop de tentatives. Réessayez dans quelques minutes.",
         "generic": "Opération impossible. Réessayez."
       }
+    }
+  },
+  "properties": {
+    "list": {
+      "title": "Biens",
+      "subtitle": "Tous les biens gérés par votre organisation.",
+      "empty": "Aucun bien pour le moment.",
+      "create": "Ajouter un bien",
+      "loading": "Chargement…",
+      "error": "Impossible de charger les biens.",
+      "column_name": "Nom",
+      "column_slug": "Identifiant",
+      "column_bedrooms": "Chambres",
+      "column_guests": "Voyageurs max",
+      "column_city": "Ville"
+    },
+    "form": {
+      "new_title": "Créer un bien",
+      "new_subtitle": "Renseignez les informations de base. Tout est modifiable plus tard.",
+      "edit_title": "Modifier le bien",
+      "fields": {
+        "slug": "Identifiant",
+        "slug_hint": "Minuscules, chiffres et tirets. Visible dans l'URL.",
+        "name": "Nom du bien",
+        "timezone": "Fuseau horaire",
+        "address_line1": "Adresse",
+        "address_line2": "Complément d'adresse",
+        "city": "Ville",
+        "postal_code": "Code postal",
+        "country": "Pays (code ISO 2 lettres)",
+        "bedrooms": "Nombre de chambres",
+        "max_guests": "Voyageurs maximum",
+        "notes": "Notes internes",
+        "notes_hint": "Visible uniquement par votre équipe."
+      },
+      "submit_create": "Créer le bien",
+      "submit_update": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer le bien",
+      "delete_confirm": "Cliquez à nouveau pour confirmer la suppression.",
+      "deleted": "Bien supprimé.",
+      "saved": "Modifications enregistrées."
+    },
+    "validation": {
+      "slug_required": "L'identifiant est obligatoire.",
+      "slug_invalid": "Identifiant invalide (2 à 64 caractères, minuscules, chiffres, tirets).",
+      "name_required": "Le nom est obligatoire.",
+      "name_too_long": "Nom trop long (max 200 caractères).",
+      "bedrooms_range": "Entre 0 et 50 chambres.",
+      "guests_range": "Entre 1 et 100 voyageurs.",
+      "country_invalid": "Code pays invalide (2 lettres, ex. FR).",
+      "notes_too_long": "Notes trop longues (max 2000 caractères)."
+    },
+    "errors": {
+      "conflict": "Cet identifiant de bien est déjà utilisé dans cette organisation.",
+      "not_found": "Bien introuvable.",
+      "generic": "Opération impossible. Réessayez."
     }
   }
 }

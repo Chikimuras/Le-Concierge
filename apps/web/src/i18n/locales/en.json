@@ -34,6 +34,11 @@
       "setup_title": "Enable two-factor authentication",
       "challenge_title": "Verification code",
       "recovery_title": "Recovery codes"
+    },
+    "properties": {
+      "list_title": "Properties",
+      "new_title": "New property",
+      "detail_title": "Property detail"
     }
   },
   "theme": {
@@ -139,6 +144,63 @@
         "rate_limited": "Too many attempts. Try again in a few minutes.",
         "generic": "Action failed. Please retry."
       }
+    }
+  },
+  "properties": {
+    "list": {
+      "title": "Properties",
+      "subtitle": "All properties managed by your organization.",
+      "empty": "No properties yet.",
+      "create": "Add a property",
+      "loading": "Loading…",
+      "error": "Could not load properties.",
+      "column_name": "Name",
+      "column_slug": "Slug",
+      "column_bedrooms": "Bedrooms",
+      "column_guests": "Max guests",
+      "column_city": "City"
+    },
+    "form": {
+      "new_title": "Create a property",
+      "new_subtitle": "Fill in the basics. You can edit everything later.",
+      "edit_title": "Edit property",
+      "fields": {
+        "slug": "Slug",
+        "slug_hint": "Lowercase letters, digits and dashes. Appears in the URL.",
+        "name": "Property name",
+        "timezone": "Timezone",
+        "address_line1": "Address",
+        "address_line2": "Address line 2",
+        "city": "City",
+        "postal_code": "Postal code",
+        "country": "Country (ISO 2-letter code)",
+        "bedrooms": "Bedrooms",
+        "max_guests": "Max guests",
+        "notes": "Internal notes",
+        "notes_hint": "Visible only to your team."
+      },
+      "submit_create": "Create property",
+      "submit_update": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete property",
+      "delete_confirm": "Click again to confirm deletion.",
+      "deleted": "Property deleted.",
+      "saved": "Changes saved."
+    },
+    "validation": {
+      "slug_required": "Slug is required.",
+      "slug_invalid": "Invalid slug (2-64 chars, lowercase letters, digits, dashes).",
+      "name_required": "Name is required.",
+      "name_too_long": "Name too long (max 200 characters).",
+      "bedrooms_range": "Between 0 and 50 bedrooms.",
+      "guests_range": "Between 1 and 100 guests.",
+      "country_invalid": "Invalid country code (2 letters, e.g. FR).",
+      "notes_too_long": "Notes too long (max 2000 characters)."
+    },
+    "errors": {
+      "conflict": "This property slug is already used in this organization.",
+      "not_found": "Property not found.",
+      "generic": "Operation failed. Please retry."
     }
   }
 }

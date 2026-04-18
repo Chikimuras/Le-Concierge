@@ -3,17 +3,17 @@
 SaaS concierge platform for short-term rentals (Airbnb, Booking.com, VRBO).
 Multi-tenant, security-first, 100% OSS stack. Solo-dev maintainable.
 
-> **Status:** Phase 4c-2 done — full 2FA loop end-to-end. Backend
-> `/auth/2fa/{enroll/start,enroll/verify,verify,disable}` with TOTP
-> (SHA1/6/30/±1), AES-256-GCM secret wrapping, 10 Argon2id-hashed
-> recovery codes, session ID rotation on step-up. Frontend: QR-based
-> enrollment flow, step-up challenge, recovery-code display with
-> download, disable from `/settings`. Router guard enforces the three
-> states (`needs_step_up`, `needs_enrollment`, cleared) without loops.
-> Previous milestone: 4b-2 (password auth UI). Next up: Phase 5 —
-> tenant scaffolding + Playwright E2E. See `docs/adr/` for design
-> decisions and [`CLAUDE.md`](./CLAUDE.md) for the full project
-> contract.
+> **Status:** Phase 5a done — properties (biens) CRUD + multi-tenant
+> isolation. Backend `/orgs/:slug/properties(/:id)` gated by a
+> `Membership` Axum extractor that resolves slug → `(org_id, role)`
+> in one round-trip and returns 404 (never 403) for unknown slug,
+> missing membership, or insufficient role (ADR 0008). Frontend:
+> `/orgs/:slug/properties` list + create / edit / delete form with
+> soft delete and a two-click confirm, `activeOrg` store reads slug
+> from the route to gate UI affordances. Previous milestone: 4c-2
+> (2FA UI). Next up: Phase 5b — team invites + member management.
+> See `docs/adr/` for design decisions and
+> [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
 
 ---
 

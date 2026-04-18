@@ -67,6 +67,24 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/SettingsView.vue'),
     meta: { requiresAuth: true, titleKey: 'pages.settings.title' },
   },
+  {
+    path: '/orgs/:slug/properties',
+    name: 'property-list',
+    component: () => import('@/views/properties/PropertyListView.vue'),
+    meta: { requiresAuth: true, titleKey: 'pages.properties.list_title' },
+  },
+  {
+    path: '/orgs/:slug/properties/new',
+    name: 'property-new',
+    component: () => import('@/views/properties/PropertyFormView.vue'),
+    meta: { requiresAuth: true, titleKey: 'pages.properties.new_title' },
+  },
+  {
+    path: '/orgs/:slug/properties/:id',
+    name: 'property-detail',
+    component: () => import('@/views/properties/PropertyFormView.vue'),
+    meta: { requiresAuth: true, titleKey: 'pages.properties.detail_title' },
+  },
 ]
 
 /**

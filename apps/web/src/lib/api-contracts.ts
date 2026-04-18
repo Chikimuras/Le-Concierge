@@ -182,3 +182,88 @@ export interface EnrollVerifyResponse {
 export interface TotpVerifyResponse extends AuthenticatedResponse {
   used_recovery_code: boolean
 }
+
+// ---- Properties (Phase 5a) ------------------------------------------------
+
+/** Mirrors the backend `Property` DTO. `deleted_at` is never emitted —
+ *  the server filters soft-deleted rows out of reads. */
+export interface Property {
+  id: string
+  org_id: string
+  slug: string
+  name: string
+  timezone: string
+  address_line1?: string
+  address_line2?: string
+  city?: string
+  postal_code?: string
+  country: string
+  bedrooms?: number
+  max_guests?: number
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface PropertyListResponse {
+  properties: Property[]
+}
+
+export const PROPERTY_NAME_MAX = 200
+export const PROPERTY_ADDRESS_MAX = 200
+export const PROPERTY_CITY_MAX = 100
+export const PROPERTY_POSTAL_CODE_MAX = 20
+export const PROPERTY_NOTES_MAX = 2000
+export const PROPERTY_BEDROOMS_MIN = 0
+export const PROPERTY_BEDROOMS_MAX = 50
+export const PROPERTY_GUESTS_MIN = 1
+export const PROPERTY_GUESTS_MAX = 100
+
+/** Shared schema builder used by both create and edit views. The update
+ *  view pipes the parsed output through as a PATCH; create requires
+ *  `slug` + `name` to be present. */
+export function propertyFormSchema(messages: {
+  slugRequired: string
+  slugInvalid: string
+  nameRequired: string
+  nameTooLong: string
+  bedroomsRange: string
+  guestsRange: string
+  countryInvalid: string
+  notesTooLong: string
+}) {
+  return z.object({
+    slug: z
+      .string()
+      .min(1, messages.slugRequired)
+      .min(ORG_SLUG_MIN, messages.slugInvalid)
+      .max(ORG_SLUG_MAX, messages.slugInvalid)
+      .regex(ORG_SLUG_REGEX, messages.slugInvalid),
+    name: z.string().min(1, messages.nameRequired).max(PROPERTY_NAME_MAX, messages.nameTooLong),
+    timezone: z.string().max(64).optional().or(z.literal('')),
+    address_line1: z.string().max(PROPERTY_ADDRESS_MAX).optional().or(z.literal('')),
+    address_line2: z.string().max(PROPERTY_ADDRESS_MAX).optional().or(z.literal('')),
+    city: z.string().max(PROPERTY_CITY_MAX).optional().or(z.literal('')),
+    postal_code: z.string().max(PROPERTY_POSTAL_CODE_MAX).optional().or(z.literal('')),
+    country: z
+      .string()
+      .regex(/^[A-Za-z]{2}$/, messages.countryInvalid)
+      .optional()
+      .or(z.literal('')),
+    bedrooms: z
+      .number({ invalid_type_error: messages.bedroomsRange })
+      .int()
+      .min(PROPERTY_BEDROOMS_MIN, messages.bedroomsRange)
+      .max(PROPERTY_BEDROOMS_MAX, messages.bedroomsRange)
+      .optional()
+      .nullable(),
+    max_guests: z
+      .number({ invalid_type_error: messages.guestsRange })
+      .int()
+      .min(PROPERTY_GUESTS_MIN, messages.guestsRange)
+      .max(PROPERTY_GUESTS_MAX, messages.guestsRange)
+      .optional()
+      .nullable(),
+    notes: z.string().max(PROPERTY_NOTES_MAX, messages.notesTooLong).optional().or(z.literal('')),
+  })
+}
