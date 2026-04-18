@@ -250,6 +250,34 @@ impl AuthService {
         &self.sessions
     }
 
+    /// Fetch the email tied to `user_id`. Used by the TOTP enrollment
+    /// routes — `otpauth://` requires the account label.
+    pub async fn load_email(&self, user_id: UserId) -> Result<Email, AuthError> {
+        let row = self
+            .repo
+            .find_user_by_id(user_id)
+            .await?
+            .ok_or_else(|| AuthError::Internal(anyhow::anyhow!("user not found")))?;
+        Ok(row.email)
+    }
+
+    /// Re-verify a user's password for a privilege-elevating action such
+    /// as disabling 2FA. Unlike [`login_with_password`], this does not
+    /// touch the failed-login counter — a bad re-auth during disable is
+    /// not a credential-stuffing attempt.
+    pub async fn verify_password_for_user(
+        &self,
+        user_id: UserId,
+        password: &str,
+    ) -> Result<bool, AuthError> {
+        let row = self
+            .repo
+            .find_user_by_id(user_id)
+            .await?
+            .ok_or_else(|| AuthError::Internal(anyhow::anyhow!("user not found")))?;
+        crate::auth::hash::verify_password(password, &self.pepper, &row.password_hash)
+    }
+
     /// Hydrate the membership list and platform-admin flag for a user.
     /// Used by `/auth/me`, `/auth/login`, and `/auth/signup` response
     /// bodies so the frontend can bootstrap its role-gated UI in one

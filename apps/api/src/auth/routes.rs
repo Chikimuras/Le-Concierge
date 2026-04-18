@@ -26,8 +26,9 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     AppError, AppState,
     auth::{
+        Role,
         dto::{AuthenticatedResponse, LoginRequest, MeResponse, MembershipSummary, SignupRequest},
-        service::{LoginInput, SignupInput},
+        service::{LoginInput, SignupInput, UserContext},
     },
     session::{AuthenticatedUser, clear_session_cookie, session_cookie},
 };
@@ -86,6 +87,9 @@ pub async fn signup(
     let response = AuthenticatedResponse {
         session: (&issue.1).into(),
         user_id: outcome.owner_user_id,
+        mfa_required: mfa_required_for(&context),
+        // Brand-new user cannot have 2FA enrolled yet.
+        mfa_enrolled: false,
         memberships: to_membership_summaries(context.memberships),
         is_platform_admin: context.is_platform_admin,
     };
@@ -127,6 +131,8 @@ pub async fn login(
         .await?;
 
     let context = state.auth.load_user_context(user_id).await?;
+    let mfa_enrolled = state.totp.is_enrolled(user_id).await?;
+    let mfa_required = mfa_required_for(&context);
 
     let cookie = session_cookie(
         &issue.session_id,
@@ -140,6 +146,8 @@ pub async fn login(
         user_id,
         memberships: to_membership_summaries(context.memberships),
         is_platform_admin: context.is_platform_admin,
+        mfa_enrolled,
+        mfa_required,
     };
     Ok((jar, Json(response)))
 }
@@ -180,11 +188,15 @@ pub async fn me(
     auth: AuthenticatedUser,
 ) -> Result<Json<MeResponse>, AppError> {
     let context = state.auth.load_user_context(auth.user_id).await?;
+    let mfa_enrolled = state.totp.is_enrolled(auth.user_id).await?;
+    let mfa_required = mfa_required_for(&context);
     Ok(Json(MeResponse {
         session: (&auth.session).into(),
         user_id: auth.user_id,
         memberships: to_membership_summaries(context.memberships),
         is_platform_admin: context.is_platform_admin,
+        mfa_enrolled,
+        mfa_required,
         resolved_at: Utc::now(),
     }))
 }
@@ -210,7 +222,7 @@ pub fn authenticated_router() -> OpenApiRouter<AppState> {
 
 // ---- Helpers ---------------------------------------------------------------
 
-fn user_agent(headers: &HeaderMap) -> &str {
+pub(crate) fn user_agent(headers: &HeaderMap) -> &str {
     headers
         .get(header::USER_AGENT)
         .and_then(|v| v.to_str().ok())
@@ -221,13 +233,21 @@ fn user_agent(headers: &HeaderMap) -> &str {
 /// front of the API) over the direct socket. When the API is exposed
 /// directly, XFF is caller-controlled and should not be trusted — add a
 /// `trust_proxy: bool` config flag when that deployment topology appears.
-fn real_client_ip(headers: &HeaderMap, fallback: IpAddr) -> IpAddr {
+pub(crate) fn real_client_ip(headers: &HeaderMap, fallback: IpAddr) -> IpAddr {
     headers
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.split(',').next())
         .and_then(|s| s.trim().parse().ok())
         .unwrap_or(fallback)
+}
+
+/// Compute `mfa_required` from a hydrated [`UserContext`]. CLAUDE.md §3.1
+/// makes 2FA mandatory for platform admins and for per-org `manager`s;
+/// `owner` can opt in but is not forced; `cleaner` / `guest` are never
+/// required.
+pub(crate) fn mfa_required_for(context: &UserContext) -> bool {
+    context.is_platform_admin || context.memberships.iter().any(|m| m.role == Role::Manager)
 }
 
 fn to_membership_summaries(rows: Vec<crate::auth::repo::MembershipRow>) -> Vec<MembershipSummary> {

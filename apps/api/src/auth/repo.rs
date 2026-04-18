@@ -25,6 +25,15 @@ pub struct UserRow {
     pub locked_until: Option<DateTime<Utc>>,
 }
 
+/// Lightweight row returned by [`AuthRepo::find_user_by_id`] — enough
+/// for the TOTP flows that need the email (for `otpauth://`) and the
+/// password hash (for re-verification on disable).
+#[derive(Debug, Clone)]
+pub struct UserIdRow {
+    pub email: Email,
+    pub password_hash: PasswordHash,
+}
+
 /// Row describing a user's role inside an organization. Returned by
 /// [`AuthRepo::list_memberships`].
 #[derive(Debug, Clone)]
@@ -230,6 +239,27 @@ impl AuthRepo {
                 role: r.role,
             })
             .collect())
+    }
+
+    /// Fetch the email + password hash for `user_id`. Used by the TOTP
+    /// flow (`otpauth://` URL needs the email; disable re-checks the
+    /// password). Returns `None` if the user no longer exists.
+    pub async fn find_user_by_id(&self, user_id: UserId) -> Result<Option<UserIdRow>, AuthError> {
+        let row = sqlx::query!(
+            r#"
+            SELECT email         AS "email: Email",
+                   password_hash
+              FROM users
+             WHERE id = $1
+            "#,
+            user_id.into_inner(),
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|r| UserIdRow {
+            email: r.email,
+            password_hash: PasswordHash::new_unchecked(r.password_hash),
+        }))
     }
 
     /// Clear the failure counter and lockout on successful authentication.

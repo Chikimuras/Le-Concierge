@@ -17,7 +17,10 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use crate::{
     audit::AuditRepo,
-    auth::{AuthRepo, AuthService},
+    auth::{
+        AuthRepo, AuthService,
+        totp::{TotpEncryptionKey, TotpRepo, TotpService},
+    },
     config::Config,
     session::{RedisSessionStore, SessionService, cookie::CookieConfig},
 };
@@ -29,6 +32,7 @@ pub struct AppState {
     pub db: PgPool,
     pub session: SessionService,
     pub auth: AuthService,
+    pub totp: TotpService,
 }
 
 impl AppState {
@@ -61,17 +65,27 @@ impl AppState {
         let audit_repo = AuditRepo::new(pool.clone());
         let auth = AuthService::new(
             auth_repo,
-            audit_repo,
+            audit_repo.clone(),
             session.clone(),
             config.auth.pepper.clone(),
         )
         .map_err(|e| anyhow::anyhow!("auth service init failed: {e}"))?;
+
+        let totp_key = TotpEncryptionKey::from_hex(&config.auth.totp_key)
+            .map_err(|e| anyhow::anyhow!("totp key init failed: {e}"))?;
+        let totp = TotpService::new(
+            TotpRepo::new(pool.clone()),
+            audit_repo,
+            config.auth.pepper.clone(),
+            totp_key,
+        );
 
         Ok(Self {
             config: Arc::new(config),
             db: pool,
             session,
             auth,
+            totp,
         })
     }
 
@@ -93,16 +107,27 @@ impl AppState {
         let audit_repo = AuditRepo::new(pool.clone());
         let auth = AuthService::new(
             auth_repo,
-            audit_repo,
+            audit_repo.clone(),
             session.clone(),
             config.auth.pepper.clone(),
         )
         .map_err(|e| anyhow::anyhow!("auth service init failed: {e}"))?;
+
+        let totp_key = TotpEncryptionKey::from_hex(&config.auth.totp_key)
+            .map_err(|e| anyhow::anyhow!("totp key init failed: {e}"))?;
+        let totp = TotpService::new(
+            TotpRepo::new(pool.clone()),
+            audit_repo,
+            config.auth.pepper.clone(),
+            totp_key,
+        );
+
         Ok(Self {
             config: Arc::new(config),
             db: pool,
             session,
             auth,
+            totp,
         })
     }
 

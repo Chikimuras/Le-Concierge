@@ -19,6 +19,7 @@ pub mod hash;
 pub mod repo;
 pub mod routes;
 pub mod service;
+pub mod totp;
 
 pub use domain::{Email, OrgId, PasswordHash, Role, Slug, UserId};
 pub use error::AuthError;

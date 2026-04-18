@@ -40,12 +40,45 @@ impl SessionService {
 
     /// Create a new session for `user_id`. Generates the `SessionId` and
     /// CSRF token, masks / fingerprints the request context, and persists
-    /// with the idle TTL.
+    /// with the idle TTL. `mfa_verified` starts `false`; [`verify_mfa`]
+    /// is the only path that flips it.
     pub async fn create(
         &self,
         user_id: UserId,
         ip: IpAddr,
         user_agent: &str,
+    ) -> Result<(SessionId, SessionData), SessionError> {
+        self.create_with_mfa(user_id, ip, user_agent, false).await
+    }
+
+    /// Rotate the session after a successful 2FA step-up (ASVS 3.2.1).
+    ///
+    /// Mints a fresh `SessionId` + CSRF token with `mfa_verified = true`
+    /// and destroys the pre-MFA session. Both operations must succeed —
+    /// if the destroy fails, the freshly created session is rolled back
+    /// so the caller never ends up with two live sessions for the same
+    /// user.
+    pub async fn verify_mfa(
+        &self,
+        old_sid: &SessionId,
+        user_id: UserId,
+        ip: IpAddr,
+        user_agent: &str,
+    ) -> Result<(SessionId, SessionData), SessionError> {
+        let new_pair = self.create_with_mfa(user_id, ip, user_agent, true).await?;
+        if let Err(e) = self.store.destroy(old_sid).await {
+            let _ = self.store.destroy(&new_pair.0).await;
+            return Err(e);
+        }
+        Ok(new_pair)
+    }
+
+    async fn create_with_mfa(
+        &self,
+        user_id: UserId,
+        ip: IpAddr,
+        user_agent: &str,
+        mfa_verified: bool,
     ) -> Result<(SessionId, SessionData), SessionError> {
         let id = SessionId::generate();
         let now = Utc::now();
@@ -55,7 +88,7 @@ impl SessionService {
         let data = SessionData {
             user_id,
             csrf_token: generate_csrf_token(),
-            mfa_verified: false,
+            mfa_verified,
             created_at: now,
             absolute_expires_at,
             ip_masked: mask_ip(ip),

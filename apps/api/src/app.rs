@@ -54,6 +54,23 @@ pub fn build_app(state: AppState) -> Router {
             .expect("static rate-limit config always builds"),
     );
 
+    // /auth/2fa/* runs on an authenticated session but is still
+    // brute-force-sensitive (6-digit TOTP codes). Builds its own config
+    // so its budget is independent of /auth/login — sharing a single
+    // `Arc<GovernorConfig>` would share the internal rate-limiter state
+    // and let a high-traffic login flow starve step-up attempts (or
+    // vice-versa). Tightening to a per-user counter lands when the
+    // Redis-backed limiter does.
+    #[allow(clippy::expect_used)]
+    let totp_rl_config = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_millisecond(180_000)
+            .burst_size(5)
+            .key_extractor(SmartIpKeyExtractor)
+            .finish()
+            .expect("static rate-limit config always builds"),
+    );
+
     // Compose routes with OpenAPI metadata, then split for serving.
     let (api_router, openapi) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(health::routes::router())
@@ -61,6 +78,9 @@ pub fn build_app(state: AppState) -> Router {
             config: auth_rl_config,
         }))
         .merge(auth::routes::authenticated_router())
+        .merge(auth::totp::routes::router().layer(GovernorLayer {
+            config: totp_rl_config,
+        }))
         .split_for_parts();
 
     let docs_router = crate::openapi::docs_router(openapi);
