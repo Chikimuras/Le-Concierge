@@ -134,3 +134,64 @@ async fn unknown_slug_returns_404_not_403() {
         .expect("list");
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn user_b_cannot_manage_user_a_invites() {
+    let app = spawn_app().await;
+
+    // Alice owns acme and creates an invite for teammate@.
+    let (a, csrf_a) = signup(&app, "alice@example.test", "acme").await;
+    let created: Value = a
+        .post(app.url("/orgs/acme/invites"))
+        .header("x-csrf-token", &csrf_a)
+        .json(&json!({ "email": "teammate@example.test", "role": "manager" }))
+        .send()
+        .await
+        .expect("create")
+        .json()
+        .await
+        .expect("json");
+    let invite_id = created["id"].as_str().unwrap().to_owned();
+
+    // Bob signs up as owner of bravo — a different org.
+    let (b, csrf_b) = signup(&app, "bob@example.test", "bravo").await;
+
+    // Listing alice's invites under her slug → 404 (ADR 0009 — 404
+    // over 403 even for this management surface).
+    let list = b
+        .get(app.url("/orgs/acme/invites"))
+        .send()
+        .await
+        .expect("list acme");
+    assert_eq!(list.status(), StatusCode::NOT_FOUND);
+
+    // Creating an invite in alice's org → 404 (same reason).
+    let create = b
+        .post(app.url("/orgs/acme/invites"))
+        .header("x-csrf-token", &csrf_b)
+        .json(&json!({ "email": "squatter@example.test", "role": "manager" }))
+        .send()
+        .await
+        .expect("create acme");
+    assert_eq!(create.status(), StatusCode::NOT_FOUND);
+
+    // Cancelling alice's invite by guessing the id → 404.
+    let cancel = b
+        .delete(app.url(&format!("/orgs/acme/invites/{invite_id}")))
+        .header("x-csrf-token", &csrf_b)
+        .send()
+        .await
+        .expect("cancel acme");
+    assert_eq!(cancel.status(), StatusCode::NOT_FOUND);
+
+    // Sanity: alice still sees her invite.
+    let alice_list: Value = a
+        .get(app.url("/orgs/acme/invites"))
+        .send()
+        .await
+        .expect("alice list")
+        .json()
+        .await
+        .expect("json");
+    assert_eq!(alice_list["invites"].as_array().unwrap().len(), 1);
+}

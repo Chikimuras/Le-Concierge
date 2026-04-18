@@ -22,6 +22,8 @@ use crate::{
         totp::{TotpEncryptionKey, TotpRepo, TotpService},
     },
     config::Config,
+    email::{LogEmailSender, SharedEmailSender},
+    invites::{InviteRepo, InviteService},
     properties::{PropertyRepo, PropertyService},
     session::{RedisSessionStore, SessionService, cookie::CookieConfig},
 };
@@ -35,6 +37,8 @@ pub struct AppState {
     pub auth: AuthService,
     pub totp: TotpService,
     pub properties: PropertyService,
+    pub invites: InviteService,
+    pub email: SharedEmailSender,
 }
 
 impl AppState {
@@ -82,7 +86,20 @@ impl AppState {
             totp_key,
         );
 
-        let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo);
+        let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo.clone());
+
+        let email: SharedEmailSender = Arc::new(LogEmailSender);
+        let auth_repo_for_invites = AuthRepo::new(pool.clone());
+        let invites = InviteService::new(
+            InviteRepo::new(pool.clone()),
+            audit_repo,
+            auth_repo_for_invites,
+            session.clone(),
+            email.clone(),
+            config.auth.pepper.clone(),
+            Duration::from_secs(config.auth.invite_ttl_secs),
+            config.http.public_base_url.clone(),
+        );
 
         Ok(Self {
             config: Arc::new(config),
@@ -91,6 +108,8 @@ impl AppState {
             auth,
             totp,
             properties,
+            invites,
+            email,
         })
     }
 
@@ -127,7 +146,20 @@ impl AppState {
             totp_key,
         );
 
-        let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo);
+        let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo.clone());
+
+        let email: SharedEmailSender = Arc::new(LogEmailSender);
+        let auth_repo_for_invites = AuthRepo::new(pool.clone());
+        let invites = InviteService::new(
+            InviteRepo::new(pool.clone()),
+            audit_repo,
+            auth_repo_for_invites,
+            session.clone(),
+            email.clone(),
+            config.auth.pepper.clone(),
+            Duration::from_secs(config.auth.invite_ttl_secs),
+            config.http.public_base_url.clone(),
+        );
 
         Ok(Self {
             config: Arc::new(config),
@@ -136,6 +168,8 @@ impl AppState {
             auth,
             totp,
             properties,
+            invites,
+            email,
         })
     }
 

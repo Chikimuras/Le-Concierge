@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO organization_members (user_id, org_id, role, invited_by)\n            SELECT $1, $2, $3, invited_by\n              FROM organization_invites\n             WHERE id = $4\n            ON CONFLICT (user_id, org_id) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "manager",
+                "cleaner",
+                "guest"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c07517a13fa3152d0ac9f2bdc6812d362a17f4cabf9f15cddd0a5f24f0475b3"
+}
