@@ -18,9 +18,9 @@ use serde_json::json;
 use crate::{
     audit::{AuditEvent, AuditRepo},
     auth::{
-        domain::{Email, OrgId, Slug, UserId},
+        domain::{Email, OrgId, PasswordHash, Slug, UserId},
         error::AuthError,
-        hash::{hash_password, verify_password},
+        hash::{hash_password, precompute_dummy_hash, verify_password},
         repo::{AuthRepo, MembershipRow},
     },
     session::{SessionData, SessionId, SessionService},
@@ -73,22 +73,31 @@ pub struct AuthService {
     audit: AuditRepo,
     sessions: SessionService,
     pepper: SecretString,
+    /// Pre-computed hash used to equalize Argon2id work across login
+    /// branches — defeats timing-based user enumeration (ASVS 2.1.1).
+    dummy_hash: PasswordHash,
 }
 
 impl AuthService {
-    #[must_use]
+    /// # Errors
+    ///
+    /// Returns [`AuthError::HashingConfig`] or [`AuthError::Hashing`] if
+    /// Argon2id cannot be initialized with the provided pepper — surfaces
+    /// configuration errors at boot rather than at the first login.
     pub fn new(
         repo: AuthRepo,
         audit: AuditRepo,
         sessions: SessionService,
         pepper: SecretString,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, AuthError> {
+        let dummy_hash = precompute_dummy_hash(&pepper)?;
+        Ok(Self {
             repo,
             audit,
             sessions,
             pepper,
-        }
+            dummy_hash,
+        })
     }
 
     /// Create an organization and its first user (owner). Audit event
@@ -152,22 +161,28 @@ impl AuthService {
         let email = match Email::parse(&input.email) {
             Ok(e) => e,
             Err(_) => {
-                // Enumeration-safe: do not surface "invalid email" on a
-                // login form — looks identical to a wrong password.
+                // Enumeration-safe in both body *and* timing: run Argon2id
+                // against `dummy_hash` so this branch is indistinguishable
+                // from a wrong-password response (ASVS 2.1.1).
+                let _ = verify_password(&input.password, &self.pepper, &self.dummy_hash);
                 self.emit_audit(failure_audit(None, ip, &input.email)).await;
                 return Err(AuthError::InvalidCredentials);
             }
         };
 
         let Some(user) = self.repo.find_user_by_email(&email).await? else {
+            let _ = verify_password(&input.password, &self.pepper, &self.dummy_hash);
             self.emit_audit(failure_audit(None, ip, &input.email)).await;
             return Err(AuthError::InvalidCredentials);
         };
 
-        // Lockout check first, still generic at the client level.
+        // Lockout check first, still generic at the client level. Burn
+        // the same Argon2id budget so a locked account is indistinguishable
+        // from a wrong-password response by latency.
         if let Some(until) = user.locked_until
             && until > Utc::now()
         {
+            let _ = verify_password(&input.password, &self.pepper, &self.dummy_hash);
             self.emit_audit(failure_audit(Some(user.id), ip, &input.email))
                 .await;
             return Err(AuthError::InvalidCredentials);

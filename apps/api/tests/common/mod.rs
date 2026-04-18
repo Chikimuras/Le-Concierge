@@ -88,7 +88,7 @@ pub async fn spawn_app() -> TestApp {
         Duration::from_secs(config.session.absolute_ttl_secs),
     );
 
-    let state = AppState::from_parts(config, db.pool.clone(), session);
+    let state = AppState::from_parts(config, db.pool.clone(), session).expect("auth state");
     let app = build_app(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")

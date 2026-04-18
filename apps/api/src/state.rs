@@ -64,7 +64,8 @@ impl AppState {
             audit_repo,
             session.clone(),
             config.auth.pepper.clone(),
-        );
+        )
+        .map_err(|e| anyhow::anyhow!("auth service init failed: {e}"))?;
 
         Ok(Self {
             config: Arc::new(config),
@@ -78,8 +79,16 @@ impl AppState {
     /// integration test harness (and by anything else that wants to wire
     /// a custom session store). Kept public rather than feature-gated so
     /// tests do not need a dedicated Cargo feature.
-    #[must_use]
-    pub fn from_parts(config: Config, pool: PgPool, session: SessionService) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if [`AuthService::new`] cannot be initialized
+    /// (invalid pepper configuration).
+    pub fn from_parts(
+        config: Config,
+        pool: PgPool,
+        session: SessionService,
+    ) -> anyhow::Result<Self> {
         let auth_repo = AuthRepo::new(pool.clone());
         let audit_repo = AuditRepo::new(pool.clone());
         let auth = AuthService::new(
@@ -87,13 +96,14 @@ impl AppState {
             audit_repo,
             session.clone(),
             config.auth.pepper.clone(),
-        );
-        Self {
+        )
+        .map_err(|e| anyhow::anyhow!("auth service init failed: {e}"))?;
+        Ok(Self {
             config: Arc::new(config),
             db: pool,
             session,
             auth,
-        }
+        })
     }
 
     /// Convenience accessor for the idle TTL, used by cookie builders.
