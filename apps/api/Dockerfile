@@ -11,16 +11,16 @@
 # - Runtime base is `gcr.io/distroless/cc-debian12:nonroot` — minimal attack
 #   surface (no shell, no package manager), runs as uid 65532.
 #   Ref: CIS Docker Benchmark 4.1, 4.6.
-# - Binary is stripped and statically linked against rustls (no system
-#   OpenSSL needed).
+# - `strip = "symbols"` in the workspace release profile ships a smaller
+#   binary without an extra `strip` invocation here.
+# - Pure rustls: no system OpenSSL dependency in the runtime image.
 
 # ---------- stage 1: cargo-chef prepare (dependency graph only) -------------
-FROM rust:1.85-slim-bookworm AS chef
+# Prebuilt image that already ships `cargo-chef` — avoids installing it from
+# crates.io at every cold build (was a reliability issue).
+# Ref: https://github.com/LukeMathWalker/cargo-chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.85-slim-bookworm AS chef
 WORKDIR /build
-RUN apt-get update \
- && apt-get install -y --no-install-recommends pkg-config \
- && rm -rf /var/lib/apt/lists/*
-RUN cargo install --locked cargo-chef
 
 FROM chef AS planner
 COPY . .
@@ -35,15 +35,15 @@ COPY --from=planner /build/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json -p api
 
 COPY . .
-RUN cargo build --release --locked -p api \
- && strip target/release/api
+RUN cargo build --release --locked -p api
 
 # ---------- stage 3: minimal runtime ----------------------------------------
 FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 WORKDIR /app
 
-# Config defaults baked in so the image boots without a bind-mount in
-# non-prod environments. Real deploys overlay APP_CONFIG_FILE or env vars.
+# Config defaults are also baked into the binary via `include_str!`, so the
+# file copy is strictly optional. Keeping it provides a discoverable artifact
+# that can be used as a starting point for `APP_CONFIG_FILE` overlays.
 COPY --from=builder /build/apps/api/config /app/config
 COPY --from=builder /build/target/release/api /app/api
 

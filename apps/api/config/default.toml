@@ -13,10 +13,10 @@ request_timeout_secs = 30
 public_base_url = "http://localhost:3000"
 
 [database]
-# Overridden in every non-trivial env via APP_DATABASE__URL. The value below
-# is a placeholder so a fresh clone can compile tests; it is intentionally
-# non-routable.
-url = "postgres://le_concierge:postgres@127.0.0.1:5432/le_concierge_dev"
+# Matches the dev compose stack (see infra/docker/.env.example). Overridden
+# in every non-trivial env via APP_DATABASE__URL. The pool is lazy, so an
+# unreachable DB does not prevent /healthz from responding.
+url = "postgres://le_concierge:dev_password_change_me@127.0.0.1:5432/le_concierge_dev"
 max_connections = 10
 min_connections = 0
 statement_timeout_secs = 5

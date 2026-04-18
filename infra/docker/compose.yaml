@@ -1,0 +1,158 @@
+# Development `docker compose` stack for Le Concierge.
+#
+# Default targets (always started):
+#   - postgres     127.0.0.1:5432
+#   - redis        127.0.0.1:6379
+#   - minio        127.0.0.1:9000 (S3), 127.0.0.1:9001 (console)
+#
+# Profile `app` also starts:
+#   - api          127.0.0.1:3000 (the distroless binary image)
+#   - caddy        127.0.0.1:8080 (reverse-proxy fronting api + web)
+#
+# Usage:
+#   docker compose -f infra/docker/compose.yaml up -d
+#   docker compose -f infra/docker/compose.yaml --profile app up -d
+#
+# Or via `just compose-up` / `just compose-up-app`.
+#
+# All ports are bound to 127.0.0.1 so nothing leaks onto the LAN. Credentials
+# below are **development defaults only** — prod uses Docker secrets / SOPS
+# per CLAUDE.md §3.3 and ADR 0002.
+
+name: le-concierge-dev
+
+services:
+  # --- Data services ---------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: le-concierge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-le_concierge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-le_concierge_dev}
+      # Slightly more aggressive fsync in dev: tolerate dirty shutdowns in
+      # exchange for faster writes. Never set in prod.
+      PGOPTIONS: "-c synchronous_commit=off"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-le_concierge} -d ${POSTGRES_DB:-le_concierge_dev}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: le-concierge-redis
+    restart: unless-stopped
+    # AOF persistence so sessions survive a `docker restart`.
+    command:
+      [
+        "redis-server",
+        "--appendonly", "yes",
+        "--save", "",
+        "--maxmemory-policy", "allkeys-lru",
+      ]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+
+  minio:
+    image: minio/minio:latest
+    container_name: le-concierge-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio_dev}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_dev_secret}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "wget -q --spider http://127.0.0.1:9000/minio/health/live || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --- Application (profile: app) -------------------------------------------
+
+  api:
+    profiles: ["app"]
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    image: le-concierge/api:dev
+    container_name: le-concierge-api
+    restart: unless-stopped
+    environment:
+      APP_HTTP__BIND: "0.0.0.0:3000"
+      APP_HTTP__PUBLIC_BASE_URL: "http://localhost:8080"
+      APP_TELEMETRY__FORMAT: "json"
+      APP_TELEMETRY__FILTER: "api=debug,tower_http=info,sqlx=warn,warn"
+      APP_DATABASE__URL: "postgres://${POSTGRES_USER:-le_concierge}:${POSTGRES_PASSWORD:-dev_password_change_me}@postgres:5432/${POSTGRES_DB:-le_concierge_dev}"
+      APP_CORS__ALLOWED_ORIGINS: '["http://localhost:8080","http://localhost:5173"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Deliberately no `ports:` mapping. In the `app` profile, Caddy is the
+    # public entry point on 127.0.0.1:8080 and reaches the api via the
+    # compose network as `api:3000`. This also prevents collisions with a
+    # native `just api-run` on the host. For direct debugging use
+    # `docker compose exec api <cmd>` or temporarily add a `-p` override
+    # via a `compose.override.yaml`.
+
+  caddy:
+    profiles: ["app"]
+    image: caddy:2-alpine
+    container_name: le-concierge-caddy
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+    # On Linux, `host.docker.internal` is not automatic — this makes the
+    # hostname resolvable inside the container so Caddy can reach the Vite
+    # dev server running natively on the host. No-op on macOS / Windows.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+# ---------------------------------------------------------------------------
+
+volumes:
+  pg_data:
+    name: le_concierge_pg_data
+  redis_data:
+    name: le_concierge_redis_data
+  minio_data:
+    name: le_concierge_minio_data
+  caddy_data:
+    name: le_concierge_caddy_data
+  caddy_config:
+    name: le_concierge_caddy_config
+
+networks:
+  default:
+    name: le_concierge_dev

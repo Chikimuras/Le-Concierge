@@ -1,0 +1,49 @@
+# Caddy configuration for the dev compose stack.
+#
+# HTTP only (port 80 inside the container, 127.0.0.1:8080 on the host).
+# Let's Encrypt / HTTPS land in a later phase when a real domain is
+# provisioned — see CLAUDE.md §3.2 and ADR 0002.
+#
+# Routing:
+#   /api/*     → api container (prefix stripped before forward)
+#   everything → Vite dev server on the host (:5173)
+#
+# Reload after edits: `docker compose -f infra/docker/compose.yaml \
+#   exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+
+{
+    # Disable admin endpoint exposure; keep the unix socket only.
+    admin off
+    # Dev: no automatic HTTPS since we listen on :80 and have no domain.
+    auto_https off
+}
+
+:80 {
+    # --- API ---------------------------------------------------------------
+    handle_path /api/* {
+        reverse_proxy api:3000 {
+            header_up Host {upstream_hostport}
+        }
+    }
+
+    # --- Web (Vite dev server on the host) --------------------------------
+    # host.docker.internal resolves to the host on macOS/Windows; on Linux,
+    # compose.yaml adds an `extra_hosts` entry that maps it to host-gateway.
+    handle {
+        reverse_proxy host.docker.internal:5173 {
+            # Vite HMR uses websockets; Caddy forwards them automatically
+            # when these headers are set.
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Gzip / zstd for any non-streaming response.
+    encode gzip zstd
+
+    # Access log to stdout — picked up by `docker compose logs caddy`.
+    log {
+        output stdout
+        format console
+    }
+}

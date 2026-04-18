@@ -1,12 +1,15 @@
 # Task runner for Le Concierge. Invoke with `just <recipe>`.
 #
-# Recipes that do not exist yet (compose-*) will be added in phase 3.
-# Update this file in lockstep with the CI workflow (phase 4).
+# Keep in lockstep with the CI workflow (phase 4).
 #
 # Ref: https://just.systems
 
 set shell := ["bash", "-cu"]
 set dotenv-load := false
+
+# Compose v2 auto-loads `infra/docker/.env` (sibling of the compose file).
+# If it does not exist, `${VAR:-default}` fallbacks in compose.yaml kick in.
+COMPOSE := "docker compose -f infra/docker/compose.yaml"
 
 # Default recipe: list all available recipes.
 default:
@@ -81,6 +84,49 @@ api-docker-run: api-docker-build
         --env-file apps/api/.env.example \
         le-concierge/api:dev
 
+# --- Compose (infra/docker) -------------------------------------------------
+
+# Start the data services (postgres, redis, minio) in the background.
+compose-up:
+    {{COMPOSE}} up -d postgres redis minio
+
+# Start everything, including the api container and the Caddy reverse proxy.
+# Use this to sanity-check the distroless image + routing before a deploy.
+compose-up-app:
+    {{COMPOSE}} --profile app up -d --build
+
+# Tail logs from every running service (Ctrl-C to detach, services keep running).
+compose-logs:
+    {{COMPOSE}} logs -f --tail=100
+
+# Show the status of every compose-managed container.
+compose-ps:
+    {{COMPOSE}} ps
+
+# Stop and remove the containers. Volumes are preserved — data survives.
+compose-down:
+    {{COMPOSE}} down
+
+# ⚠️ Destructive: stop, remove, and DELETE named volumes (DB data lost).
+compose-reset:
+    {{COMPOSE}} down -v
+
+# Interactive `psql` shell on the running postgres container.
+db-psql:
+    {{COMPOSE}} exec postgres psql \
+        -U ${POSTGRES_USER:-le_concierge} \
+        -d ${POSTGRES_DB:-le_concierge_dev}
+
+# Interactive `redis-cli` shell on the running redis container.
+redis-cli:
+    {{COMPOSE}} exec redis redis-cli
+
+# Open the MinIO web console. macOS-only `open`; on Linux use xdg-open.
+minio-console:
+    @echo "MinIO console: http://127.0.0.1:9001"
+    @echo "  user:     ${MINIO_ROOT_USER:-minio_dev}"
+    @echo "  password: ${MINIO_ROOT_PASSWORD:-minio_dev_secret}"
+
 # --- Web (apps/web) ---------------------------------------------------------
 
 # Install JS deps for all bun workspaces. Run after cloning.
@@ -108,9 +154,10 @@ web-lint:
 # Start both api and web in parallel. Requires GNU parallel or similar; kept
 # here as documentation until a proper `just` recipe for process groups lands.
 dev:
-    @echo "Run in two terminals:"
-    @echo "  1) just api-run"
-    @echo "  2) just web-dev"
+    @echo "Typical dev flow:"
+    @echo "  1) just compose-up     # postgres + redis + minio in the background"
+    @echo "  2) just api-run        # Axum on 127.0.0.1:3000 (terminal 1)"
+    @echo "  3) just web-dev        # Vite on 127.0.0.1:5173 (terminal 2)"
 
 # --- CI shortcut -------------------------------------------------------------
 

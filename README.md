@@ -3,10 +3,10 @@
 SaaS concierge platform for short-term rentals (Airbnb, Booking.com, VRBO).
 Multi-tenant, security-first, 100% OSS stack. Solo-dev maintainable.
 
-> **Status:** Phase 2 — `apps/api` serves `GET /healthz` + OpenAPI/Scalar
-> docs; `apps/web` is a Vue 3 + Vite + shadcn-vue shell that pings it. No
-> migration, no auth yet. See `docs/adr/` for design decisions and
-> [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
+> **Status:** Phase 3 — `apps/api` + `apps/web` + a local `docker compose`
+> stack (Postgres 16, Redis 7, MinIO; optionally api + Caddy via the `app`
+> profile). No migration, no auth yet. See `docs/adr/` for design decisions
+> and [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
 
 ---
 
@@ -55,6 +55,35 @@ lefthook install
 just
 ```
 
+### Start the backing services (Phase 3)
+
+```bash
+cp infra/docker/.env.example infra/docker/.env   # tweak credentials if needed
+just compose-up                                  # postgres + redis + minio
+just compose-ps                                  # check that all are healthy
+```
+
+Services land on loopback only:
+
+| Service   | Host port           | Notes                                  |
+| --------- | ------------------- | -------------------------------------- |
+| Postgres  | `127.0.0.1:5432`    | `psql` via `just db-psql`              |
+| Redis     | `127.0.0.1:6379`    | `redis-cli` via `just redis-cli`       |
+| MinIO     | `127.0.0.1:9000`    | S3 API endpoint                        |
+| MinIO UI  | `127.0.0.1:9001`    | Web console, see `just minio-console`  |
+
+To tear down (keeping volumes):
+
+```bash
+just compose-down
+```
+
+To nuke volumes (⚠️ destroys DB data):
+
+```bash
+just compose-reset
+```
+
 ### Run the API (Phase 1)
 
 ```bash
@@ -99,7 +128,17 @@ just api-docker-build                    # multi-stage, distroless, nonroot
 just api-docker-run                      # runs it locally, port 3000
 ```
 
-More commands will appear as the Docker compose stack (Phase 3) lands.
+### Preview the full stack (api + Caddy reverse proxy)
+
+```bash
+just compose-up-app                      # adds api + caddy to the stack
+open http://127.0.0.1:8080/api/healthz
+open http://127.0.0.1:8080               # Caddy → Vite (host)
+```
+
+The `app` profile builds the distroless api image and fronts everything
+with Caddy. Web is still run natively via `just web-dev` — Caddy reaches
+it via `host.docker.internal:5173`.
 
 ---
 
@@ -114,7 +153,7 @@ More commands will appear as the Docker compose stack (Phase 3) lands.
 │   ├── contracts/     # TS types generated from OpenAPI + shared Zod schemas
 │   └── ui/            # Shared shadcn-vue components (if needed)
 ├── infra/
-│   ├── docker/        # Dockerfiles, compose files, reverse-proxy configs
+│   ├── docker/        # Dockerfiles, compose files, Caddyfile — Phase 3 ✓
 │   └── grafana/       # Provisioned dashboards + datasources
 ├── docs/
 │   ├── adr/           # Architecture Decision Records (MADR format)
