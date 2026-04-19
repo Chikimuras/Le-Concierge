@@ -50,3 +50,11 @@ cookie_secure = false
 [redis]
 # Matches the compose stack default. Override via APP_REDIS__URL in prod.
 url = "redis://127.0.0.1:6379/"
+
+# `[email]` — transport selector for outgoing mail. `log` is the safe
+# default: every call to `EmailSender::send_invite` is logged via
+# `tracing::warn!` and nothing leaves the process. Flip to `smtp` and
+# fill in `smtp_host` / `smtp_port` / `from_address` to point at a real
+# sink — locally that is Mailpit on 127.0.0.1:1025 (ADR 0010).
+[email]
+mode = "log"

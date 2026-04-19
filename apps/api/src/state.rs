@@ -22,7 +22,7 @@ use crate::{
         totp::{TotpEncryptionKey, TotpRepo, TotpService},
     },
     config::Config,
-    email::{LogEmailSender, SharedEmailSender},
+    email::{self, SharedEmailSender},
     invites::{InviteRepo, InviteService},
     properties::{PropertyRepo, PropertyService},
     session::{RedisSessionStore, SessionService, cookie::CookieConfig},
@@ -88,7 +88,8 @@ impl AppState {
 
         let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo.clone());
 
-        let email: SharedEmailSender = Arc::new(LogEmailSender);
+        let email: SharedEmailSender = email::build_sender(&config.email)
+            .map_err(|e| anyhow::anyhow!("email sender init failed: {e}"))?;
         let auth_repo_for_invites = AuthRepo::new(pool.clone());
         let invites = InviteService::new(
             InviteRepo::new(pool.clone()),
@@ -148,7 +149,8 @@ impl AppState {
 
         let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo.clone());
 
-        let email: SharedEmailSender = Arc::new(LogEmailSender);
+        let email: SharedEmailSender = email::build_sender(&config.email)
+            .map_err(|e| anyhow::anyhow!("email sender init failed: {e}"))?;
         let auth_repo_for_invites = AuthRepo::new(pool.clone());
         let invites = InviteService::new(
             InviteRepo::new(pool.clone()),
