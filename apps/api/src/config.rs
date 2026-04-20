@@ -40,6 +40,7 @@ pub struct Config {
     pub auth: AuthConfig,
     pub session: SessionConfig,
     pub redis: RedisConfig,
+    pub email: EmailConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -150,6 +151,40 @@ pub struct RedisConfig {
     pub url: String,
 }
 
+/// Transport selector for the [`EmailSender`][crate::email::EmailSender]
+/// trait. `log` ships every invite through `tracing::warn!` (CI + solo
+/// dev); `smtp` speaks plain SMTP to a local sink such as Mailpit
+/// (ADR 0010). Prod swaps this for a provider API client in Phase 6.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum EmailMode {
+    Log,
+    Smtp,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EmailConfig {
+    /// Which transport to instantiate. `log` is safe by default: nothing
+    /// leaves the process.
+    pub mode: EmailMode,
+    /// SMTP host the sender dials. Only consulted when `mode = "smtp"`.
+    #[serde(default)]
+    pub smtp_host: Option<String>,
+    /// SMTP port. Only consulted when `mode = "smtp"`. Use `1025` for
+    /// Mailpit, `587` for real relays.
+    #[serde(default)]
+    pub smtp_port: Option<u16>,
+    /// From-address rendered on every outgoing message. Must be a valid
+    /// RFC 5321 mailbox (`lettre` parses this at startup).
+    #[serde(default)]
+    pub from_address: Option<String>,
+    /// Optional display name paired with `from_address`. Defaults to a
+    /// bare address if unset.
+    #[serde(default)]
+    pub from_name: Option<String>,
+}
+
 impl Config {
     /// Load configuration from the layered sources documented at module level.
     ///
@@ -219,6 +254,15 @@ impl Config {
             "redis": {
                 "configured": !self.redis.url.is_empty(),
             },
+            "email": {
+                "mode": match self.email.mode {
+                    EmailMode::Log => "log",
+                    EmailMode::Smtp => "smtp",
+                },
+                "smtp_configured": self.email.smtp_host.is_some()
+                    && self.email.smtp_port.is_some(),
+                "from_configured": self.email.from_address.is_some(),
+            },
         })
     }
 }
@@ -265,6 +309,13 @@ mod tests {
             },
             redis: RedisConfig {
                 url: "redis://redis.example:6379/".into(),
+            },
+            email: EmailConfig {
+                mode: EmailMode::Log,
+                smtp_host: None,
+                smtp_port: None,
+                from_address: None,
+                from_name: None,
             },
         };
 

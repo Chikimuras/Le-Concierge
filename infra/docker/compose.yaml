@@ -4,6 +4,7 @@
 #   - postgres     127.0.0.1:5432
 #   - redis        127.0.0.1:6379
 #   - minio        127.0.0.1:9000 (S3), 127.0.0.1:9001 (console)
+#   - mailpit      127.0.0.1:1025 (SMTP), 127.0.0.1:8025 (web UI)
 #
 # Profile `app` also starts:
 #   - api          127.0.0.1:3000 (the distroless binary image)
@@ -91,6 +92,32 @@ services:
       retries: 10
       start_period: 10s
 
+  # Local SMTP sink. Accepts any sender/auth, never relays externally —
+  # every message stays in the in-memory store and is visible at
+  # http://127.0.0.1:8025. Deliberately no volume: the inbox resets on
+  # restart, which is the expected dev workflow. Bound to loopback only
+  # and never enabled in prod (ADR 0010).
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: le-concierge-mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: "5000"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test:
+        - "CMD"
+        - "/mailpit"
+        - "readyz"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   # --- Application (profile: app) -------------------------------------------
 
   api:
@@ -108,10 +135,17 @@ services:
       APP_TELEMETRY__FILTER: "api=debug,tower_http=info,sqlx=warn,warn"
       APP_DATABASE__URL: "postgres://${POSTGRES_USER:-le_concierge}:${POSTGRES_PASSWORD:-dev_password_change_me}@postgres:5432/${POSTGRES_DB:-le_concierge_dev}"
       APP_CORS__ALLOWED_ORIGINS: '["http://localhost:8080","http://localhost:5173"]'
+      APP_EMAIL__MODE: "smtp"
+      APP_EMAIL__SMTP_HOST: "mailpit"
+      APP_EMAIL__SMTP_PORT: "1025"
+      APP_EMAIL__FROM_ADDRESS: "no-reply@leconcierge.test"
+      APP_EMAIL__FROM_NAME: "Le Concierge (dev)"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     # Deliberately no `ports:` mapping. In the `app` profile, Caddy is the
     # public entry point on 127.0.0.1:8080 and reaches the api via the

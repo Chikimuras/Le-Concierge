@@ -15,8 +15,8 @@ use std::{net::SocketAddr, time::Duration};
 use api::{
     AppState, Config, build_app,
     config::{
-        AuthConfig, CorsConfig, DatabaseConfig, HttpConfig, LogFormat, RedisConfig, SessionConfig,
-        TelemetryConfig,
+        AuthConfig, CorsConfig, DatabaseConfig, EmailConfig, EmailMode, HttpConfig, LogFormat,
+        RedisConfig, SessionConfig, TelemetryConfig,
     },
     session::SessionService,
 };
@@ -76,6 +76,13 @@ fn test_config(db_url: String, redis_url: String) -> Config {
             cookie_domain: None,
         },
         redis: RedisConfig { url: redis_url },
+        email: EmailConfig {
+            mode: EmailMode::Log,
+            smtp_host: None,
+            smtp_port: None,
+            from_address: None,
+            from_name: None,
+        },
     }
 }
 

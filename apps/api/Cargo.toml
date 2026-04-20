@@ -131,6 +131,19 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 # trait definition minimal.
 async-trait = "0.1"
 
+# --- email -------------------------------------------------------------------
+# SMTP client used by the dev `SmtpEmailSender`. `rustls` keeps the TLS
+# stack uniform with reqwest / sqlx; `builder` unlocks the message
+# builder API; `smtp-transport` + `tokio1-rustls-tls` = async SMTP.
+# Auth features are intentionally left off: the dev sink (Mailpit)
+# accepts anything, and prod will swap this sender for a provider API
+# client (Resend / Postmark) rather than raw auth-SMTP (ADR 0010).
+lettre = { version = "0.11", default-features = false, features = [
+    "smtp-transport",
+    "tokio1-rustls-tls",
+    "builder",
+] }
+
 [dev-dependencies]
 # End-to-end integration tests spawn the real app and hit it over HTTP.
 # `cookies` enables the cookie jar used by the auth-flow tests.

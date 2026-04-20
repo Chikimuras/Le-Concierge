@@ -89,7 +89,7 @@ api-docker-run: api-docker-build
 
 # Start the data services (postgres, redis, minio) in the background.
 compose-up:
-    {{COMPOSE}} up -d postgres redis minio
+    {{COMPOSE}} up -d postgres redis minio mailpit
 
 # Start everything, including the api container and the Caddy reverse proxy.
 # Use this to sanity-check the distroless image + routing before a deploy.
@@ -156,6 +156,10 @@ minio-console:
     @echo "MinIO console: http://127.0.0.1:9001"
     @echo "  user:     ${MINIO_ROOT_USER:-minio_dev}"
     @echo "  password: ${MINIO_ROOT_PASSWORD:-minio_dev_secret}"
+
+# Print the Mailpit inbox URL. macOS users can add `| xargs open`.
+mailpit:
+    @echo "Mailpit inbox: http://127.0.0.1:8025"
 
 # --- Web (apps/web) ---------------------------------------------------------
 
