@@ -85,6 +85,21 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/properties/PropertyFormView.vue'),
     meta: { requiresAuth: true, titleKey: 'pages.properties.detail_title' },
   },
+  {
+    path: '/orgs/:slug/team',
+    name: 'team',
+    component: () => import('@/views/team/TeamView.vue'),
+    meta: { requiresAuth: true, titleKey: 'pages.team.title' },
+  },
+  {
+    path: '/accept-invite',
+    name: 'accept-invite',
+    component: () => import('@/views/team/AcceptInviteView.vue'),
+    // Open to anon: the invite token itself is the auth proof. An
+    // already-authed user gets the "accept" branch; an anon user is
+    // routed to the signup / login sub-flow from within the view.
+    meta: { titleKey: 'pages.accept_invite.title' },
+  },
 ]
 
 /**

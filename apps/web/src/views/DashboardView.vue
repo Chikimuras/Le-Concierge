@@ -64,6 +64,15 @@
                 {{ t('properties.list.title') }}
               </Button>
             </RouterLink>
+            <RouterLink
+              v-slot="{ navigate }"
+              :to="{ name: 'team', params: { slug: m.org_slug } }"
+              custom
+            >
+              <Button variant="outline" size="sm" @click="navigate">
+                {{ t('team.title') }}
+              </Button>
+            </RouterLink>
           </div>
         </li>
       </ul>

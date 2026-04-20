@@ -3,15 +3,16 @@
 SaaS concierge platform for short-term rentals (Airbnb, Booking.com, VRBO).
 Multi-tenant, security-first, 100% OSS stack. Solo-dev maintainable.
 
-> **Status:** Phase 5a done — properties (biens) CRUD + multi-tenant
-> isolation. Backend `/orgs/:slug/properties(/:id)` gated by a
-> `Membership` Axum extractor that resolves slug → `(org_id, role)`
-> in one round-trip and returns 404 (never 403) for unknown slug,
-> missing membership, or insufficient role (ADR 0008). Frontend:
-> `/orgs/:slug/properties` list + create / edit / delete form with
-> soft delete and a two-click confirm, `activeOrg` store reads slug
-> from the route to gate UI affordances. Previous milestone: 4c-2
-> (2FA UI). Next up: Phase 5b — team invites + member management.
+> **Status:** Phase 5b-2 done — team invites end-to-end. Backend
+> (5b-1): `/orgs/:slug/invites` (list / create / cancel, manager+)
+> + anonymous `/auth/invites/{preview,accept,signup-and-accept}`;
+> tokens are 32-byte OsRng + HMAC-SHA-256 (pepper) with partial
+> UNIQUE indexes; 404-over-403 keeps enumeration safe (ADR 0009).
+> Frontend (5b-2): `/orgs/:slug/team` (pending list + invite form,
+> gated on `canManage`) and `/accept-invite?token=…` handling both
+> the authed-accept and the signup-and-accept branches from the
+> same page. Previous milestone: 5a (properties). Next up: Phase
+> 5b-bis — member management UI (role change / remove member).
 > See `docs/adr/` for design decisions and
 > [`CLAUDE.md`](./CLAUDE.md) for the full project contract.
 
