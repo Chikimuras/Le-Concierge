@@ -116,14 +116,9 @@ impl InviteService {
             .create(org_id, actor, &input, &token_hash, expires_at)
             .await?;
 
-        let invite_url = format!(
-            "{}/accept-invite?token={token}",
-            self.public_base_url.trim_end_matches('/'),
-        );
-        self.email
-            .send_invite(&invite.email, org_name, &invite_url)
-            .await?;
-
+        // Audit the creation *before* delivery so the row is traceable
+        // regardless of email outcome (CLAUDE.md §3.3 — audit log must
+        // reflect DB state, not handler return value).
         self.emit_audit(AuditEvent {
             kind: "invite.created",
             actor_user_id: Some(actor),
@@ -136,6 +131,40 @@ impl InviteService {
             }),
         })
         .await;
+
+        let invite_url = format!(
+            "{}/accept-invite?token={token}",
+            self.public_base_url.trim_end_matches('/'),
+        );
+        if let Err(err) = self
+            .email
+            .send_invite(&invite.email, org_name, &invite_url)
+            .await
+        {
+            // Fail-closed (CLAUDE.md §3, ADR 0009): if delivery fails the
+            // plaintext token never reached the invitee, so we cancel the
+            // pending row — no dangling token stays acceptable — and audit
+            // the failure before propagating the error.
+            if let Err(cancel_err) = self.repo.cancel(org_id, invite.id).await {
+                tracing::error!(
+                    error = %cancel_err,
+                    invite_id = %invite.id,
+                    "failed to cancel invite after email delivery failure",
+                );
+            }
+            self.emit_audit(AuditEvent {
+                kind: "invite.email_failed",
+                actor_user_id: Some(actor),
+                org_id: Some(org_id),
+                payload: json!({
+                    "invite_id": invite.id,
+                    "email": mask_email(invite.email.as_str()),
+                    "reason": err.to_string(),
+                }),
+            })
+            .await;
+            return Err(InviteError::Email(err));
+        }
 
         Ok(invite)
     }

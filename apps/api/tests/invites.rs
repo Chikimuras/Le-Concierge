@@ -13,7 +13,9 @@ mod common;
 use reqwest::{Client, StatusCode};
 use serde_json::{Value, json};
 
-use crate::common::{TestApp, spawn_app};
+use std::sync::Arc;
+
+use crate::common::{TestApp, email::FailingEmailSender, spawn_app, spawn_app_with_email};
 
 fn client() -> Client {
     Client::builder()
@@ -349,6 +351,63 @@ async fn expired_invite_returns_410_on_preview() {
         .await
         .expect("preview");
     assert_eq!(resp.status(), StatusCode::GONE);
+}
+
+#[tokio::test]
+async fn create_rolls_back_on_email_failure() {
+    // Fail-closed contract (CLAUDE.md §3, ADR 0009): if delivery fails, the
+    // persisted invite must be cancelled, both `invite.created` and
+    // `invite.email_failed` must land in the audit log, and the caller sees 500.
+    let app = spawn_app_with_email(Arc::new(FailingEmailSender)).await;
+    let (c, csrf) = signup(&app, "owner@example.test", "acme").await;
+
+    let resp = c
+        .post(app.url("/orgs/acme/invites"))
+        .header("x-csrf-token", &csrf)
+        .json(&json!({ "email": "doomed@example.test", "role": "manager" }))
+        .send()
+        .await
+        .expect("create");
+    assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+    // Invite row exists but is cancelled.
+    let row: (
+        Option<chrono::DateTime<chrono::Utc>>,
+        Option<chrono::DateTime<chrono::Utc>>,
+    ) = sqlx::query_as(
+        r#"SELECT cancelled_at, accepted_at
+                 FROM organization_invites
+                WHERE email = $1"#,
+    )
+    .bind("doomed@example.test")
+    .fetch_one(&app.db.pool)
+    .await
+    .expect("invite row");
+    assert!(row.0.is_some(), "cancelled_at must be set after rollback");
+    assert!(row.1.is_none(), "accepted_at must stay null");
+
+    // Manager listing shows no pending invite.
+    let list: Value = c
+        .get(app.url("/orgs/acme/invites"))
+        .send()
+        .await
+        .expect("list")
+        .json()
+        .await
+        .expect("json");
+    assert_eq!(list["invites"].as_array().unwrap().len(), 0);
+
+    // Both audit events present — hash chain remains contiguous.
+    let kinds: Vec<String> = sqlx::query_scalar(
+        r#"SELECT kind
+             FROM audit_events
+            WHERE kind IN ('invite.created', 'invite.email_failed')
+            ORDER BY id"#,
+    )
+    .fetch_all(&app.db.pool)
+    .await
+    .expect("audit kinds");
+    assert_eq!(kinds, vec!["invite.created", "invite.email_failed"]);
 }
 
 #[tokio::test]

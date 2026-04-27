@@ -8,6 +8,7 @@
 #![allow(dead_code, clippy::unwrap_used, clippy::expect_used)] // test harness
 
 pub mod db;
+pub mod email;
 pub mod redis;
 
 use std::{net::SocketAddr, time::Duration};
@@ -18,6 +19,7 @@ use api::{
         AuthConfig, CorsConfig, DatabaseConfig, EmailConfig, EmailMode, HttpConfig, LogFormat,
         RedisConfig, SessionConfig, TelemetryConfig,
     },
+    email::SharedEmailSender,
     session::SessionService,
 };
 use secrecy::SecretString;
@@ -87,8 +89,18 @@ fn test_config(db_url: String, redis_url: String) -> Config {
 }
 
 /// Spin up Postgres + Redis containers and the real app on an
-/// OS-assigned loopback port.
+/// OS-assigned loopback port. Uses the default log-only email sender.
 pub async fn spawn_app() -> TestApp {
+    spawn_app_inner(None).await
+}
+
+/// Variant that injects a caller-provided `EmailSender`. Used by the
+/// invite-delivery failure tests to assert the fail-closed rollback.
+pub async fn spawn_app_with_email(sender: SharedEmailSender) -> TestApp {
+    spawn_app_inner(Some(sender)).await
+}
+
+async fn spawn_app_inner(email_override: Option<SharedEmailSender>) -> TestApp {
     let db = TestDatabase::spawn().await;
     let redis = TestRedis::spawn().await;
 
@@ -99,7 +111,11 @@ pub async fn spawn_app() -> TestApp {
         Duration::from_secs(config.session.absolute_ttl_secs),
     );
 
-    let state = AppState::from_parts(config, db.pool.clone(), session).expect("auth state");
+    let state = match email_override {
+        Some(sender) => AppState::from_parts_with_email(config, db.pool.clone(), session, sender)
+            .expect("auth state"),
+        None => AppState::from_parts(config, db.pool.clone(), session).expect("auth state"),
+    };
     let app = build_app(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")

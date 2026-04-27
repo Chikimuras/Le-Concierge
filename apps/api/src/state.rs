@@ -122,11 +122,31 @@ impl AppState {
     /// # Errors
     ///
     /// Returns an error if [`AuthService::new`] cannot be initialized
-    /// (invalid pepper configuration).
+    /// (invalid pepper configuration), or if the email sender cannot be
+    /// built from `config.email`.
     pub fn from_parts(
         config: Config,
         pool: PgPool,
         session: SessionService,
+    ) -> anyhow::Result<Self> {
+        let email = email::build_sender(&config.email)
+            .map_err(|e| anyhow::anyhow!("email sender init failed: {e}"))?;
+        Self::from_parts_with_email(config, pool, session, email)
+    }
+
+    /// Variant of [`from_parts`] that accepts an externally-built email
+    /// sender. Integration tests use this to swap in a stub that fails on
+    /// purpose (see `tests/invites.rs::create_rolls_back_on_email_failure`).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`from_parts`] minus the email init failure — since the
+    /// sender is provided by the caller.
+    pub fn from_parts_with_email(
+        config: Config,
+        pool: PgPool,
+        session: SessionService,
+        email: SharedEmailSender,
     ) -> anyhow::Result<Self> {
         let auth_repo = AuthRepo::new(pool.clone());
         let audit_repo = AuditRepo::new(pool.clone());
@@ -149,8 +169,6 @@ impl AppState {
 
         let properties = PropertyService::new(PropertyRepo::new(pool.clone()), audit_repo.clone());
 
-        let email: SharedEmailSender = email::build_sender(&config.email)
-            .map_err(|e| anyhow::anyhow!("email sender init failed: {e}"))?;
         let auth_repo_for_invites = AuthRepo::new(pool.clone());
         let invites = InviteService::new(
             InviteRepo::new(pool.clone()),
